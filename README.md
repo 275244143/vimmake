@@ -151,5 +151,6 @@ Vimmake has been tested in console and gui version. You can use 'open' in mac os
 
 As executing program in a new terminal window correctly is a little tricky thing, I create a script to let you open a new terminal window to execute your program in both Windows, Linux (ubuntu), Cygwin and Mac OS X, you can try it from: https://github.com/skywind3000/terminal.
 
-## Credits
-TODO
+## Reference
+
+http://www.vim.org/scripts/script.php?script_id=5418 
