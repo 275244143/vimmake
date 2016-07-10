@@ -10,11 +10,12 @@ Vim has numerous community plugins and I have tried some. Most of them are reall
 
 ## Feature
 
-- Customize user tool to invoke compiler or other tools with current buffer/directory.
-- Each tool can be created as a single shell script in unix like system or a batch file in windows (.cmd/.bat).
-- Tools can be launched with given system environment variables
-- Output can be captured and display in the quickfix window. 
+- Customize user tool to invoke compiler or other tools with current file or directory.
+- Tools can be created as a single shell script in unix like system or a batch file in windows (.cmd/.bat).
+- Tools can be launched by `:VimTool {name}` with given system environment variables
 - Launch mode can be configured as `sync`, `async` or `silent` (run in background and discard output).
+- Output can be captured and display in the quickfix window in realtime.
+- Ex-command `:VimTool {name}` and `:VimStop` can be binded to your favorite keymaps.
 - Error output can be matched in quickfix window.
 - Simple and lightweight.
 
