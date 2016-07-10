@@ -1,4 +1,4 @@
-## Introduction
+# Vimmake plugin
 
 Customize shell tools for vim. Similar to 'Run Commands' in NotePad++, 'User Tool' in EditPlus/UltraEdit, 'External Tool' in GEdit and 'Shell Commands' in TextMate. 
 
