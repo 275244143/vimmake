@@ -38,7 +38,9 @@ After changing file mode to 0755, you can launch it inside vim with the command 
 :VimTool gcc
 ```
 
-This command can be used to compile the current source file. You can bind it to a hotkey to speed up your compile-edit-compile cycle. The command `VimTool {name}` will launch the script `"vimmake.{name}"` (or `"vimmake.{name}.cmd"` for windows) in the directory of `"~/.vim"` with the predefined environment variables:
+This command can be used to compile the current source file. You can bind it to a hotkey to speed up your compile-edit-compile cycle. 
+
+The command `VimTool {name}` will launch the script `"vimmake.{name}"` (or `"vimmake.{name}.cmd"` for windows) in the directory of `"~/.vim"` with the predefined environment variables:
 
 | Environment Variable | Description |
 |----------------------|-------------|
@@ -181,7 +183,7 @@ esac
 
 ### Compile makefile
 
-Create `"~/.vim/vimmake.make"` to compile your makefile with `:VimTool make`:
+Create `"~/.vim/vimmake.make"` to build your makefile with `:VimTool make` or `:VimTool make {target}`:
 
 ```bash
 #! /bin/sh
