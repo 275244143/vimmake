@@ -61,7 +61,7 @@ You can setup as many tools as you wish to build your project makefile, or compi
 
 ## Command
 
-**VimTool** - launch the user tool 
+### VimTool - launch the user tool 
 
 ```VimL
 :VimTool {name}
@@ -75,7 +75,7 @@ This will launch `"~/.vim/vimmake.{name}"` in unix and `"~/.vim/vimmake.{name}.c
 
 Launch `"~/.vim/vimmake.{name}"` and pass `{target}` in the system environment variable as `$VIM_TARGET`. Script can use this value as build target and pass as a parameter of gnumake.
 
-**VimStop** - stop the user tool in background
+### VimStop - stop the user tool in background
 
 This command will stop the current async building job.
 
@@ -84,7 +84,7 @@ This command will stop the current async building job.
 
 Edit your `.vimrc` to configurate vimmake in details:
 
-**g:vimmake_mode (dictionary)** - launch mode
+### g:vimmake_mode (dictionary) - launch mode
 
 Setup launch mode to indicate how to execute the tools:
 
@@ -112,7 +112,7 @@ Vim 7.4.1829 is required for using `async` mode.
 Output can be viewed in quickfix window, to open the quickfix window, you can use `:copen 8` or `:botright copen 8` to open quickfix window in different position. See `:help quickfix` for detail.
 
 
-**g:vimmake_path (string)** - tool path
+### g:vimmake_path (string) - tool path
 
 This option allows you to change the home directory of tools rather than `"~/.vim/"`.
 
@@ -122,15 +122,15 @@ let g:vimmake_path = '/home/myname/github/config/tools'
 
 Now `:VimTool {name}` will launch `vimmake.{name}` from `"/home/myname/github/config/tools"`.
 
-**g:vimmake_save (int)** - save before launch ?
+### g:vimmake_save (int) - save before launch ?
 
 It can be set to 1 if you want to save current file before execute a tool.
 
-**g:vimmake_build_scroll (int)** - auto-scroll quickfix ?
+### g:vimmake_build_scroll (int) - auto-scroll quickfix ?
 
 When it is set to 1 for async building, quickfix window will scroll to last line automaticly if there is a new output line added to quickfix.
 
-**g:vimmake_build_post (string)** - post vim commands
+### g:vimmake_build_post (string) - post vim commands
 
 When async building job is finished, script in `g:vimmake_build_post` will be executed. It can be used to invoke a external program:
 
