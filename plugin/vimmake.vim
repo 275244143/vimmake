@@ -21,6 +21,8 @@
 "     $VIM_MODE      - Execute via 0:!, 1:makeprg, 2:system()
 "     $VIM_SCRIPT    - Home path of tool scripts
 "     $VIM_TARGET    - Target given after name as ":VimTool {name} {target}"
+"     $VIM_COLUMNS   - How many columns in vim's screen
+"     $VIM_LINES     - How many lines in vim's screen
 "
 " Settings:
 "     g:vimmake_path - change the path of tools rather than ~/.vim/
