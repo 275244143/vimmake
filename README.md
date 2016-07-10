@@ -329,7 +329,13 @@ GOTO END
 
 ```
 
-Ensure that `g:vimmake_mode["gcc"]` has been set to "quickfix" or "async", so that output can be captured in the quickfix window.
+The location of batch files can also be changed if you don't like to access `C:/Users/yourname/.vim`. Edit your `_vimrc` in windows and add this line:
+
+```VimL
+let g:vimmake_path = 'd:/github/vim/tools/win32'
+```
+
+Now, you can save your batch files in your github repository.
 
 ### Invoke mingw in windows
 
@@ -347,6 +353,8 @@ echo missing file name
 
 :END
 ```
+
+Ensure that `g:vimmake_mode["gcc"]` has been set to "quickfix" or "async", so that output can be captured in the quickfix window.
 
 Using the latest gvim in windows for async-jobs is recommended, you can download from [official gvim daily build](https://github.com/vim/vim-win32-installer/releases/).
 
