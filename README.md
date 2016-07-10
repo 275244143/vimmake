@@ -58,6 +58,8 @@ The command `VimTool {name}` will launch the script `"vimmake.{name}"` (or `"vim
 | $VIM_MODE | Execute via 0:bang(!), 1:makeprg, 2:system(), ... |
 | $VIM_SCRIPT | Home path of tool scripts |
 | $VIM_TARGET | Target given after name as ":VimTool {name} {target}" |
+| $VIM_COLUMNS | How many columns in vim's screen |
+| $VIM_LINES | How many lines in vim's screen |
 
 
 You can setup as many tools as you wish to build your project makefile, or compile a single source file directly, or compile your latex, or run grep in current directory, passing current word under cursor to external man help / dictionary / other external scripts, or just call svn diff with current file and redirect the output to the bottom panel.
@@ -123,7 +125,7 @@ This option allows you to change the home directory of tools rather than `"~/.vi
 let g:vimmake_path = '/home/myname/github/config/tools'
 ```
 
-Now `:VimTool {name}` will launch `vimmake.{name}` from `"/home/myname/github/config/tools"`.
+Now `:VimTool {name}` will launch `vimmake.{name}` from `"/home/myname/github/config/tools"`. so you can put your tool scripts into some git/svn repositories and get it sync every where.
 
 ### g:vimmake_save (int) - save before launch ?
 
@@ -133,7 +135,7 @@ It can be set to 1 if you want to save current file before execute a tool.
 
 When it is set to 1 for async building, quickfix window will scroll to last line automaticly if there is a new output line added to quickfix.
 
-### g:vimmake_build_post (string) - post vim commands
+### g:vimmake_build_post (string) - post async commands
 
 When async building job is finished, script in `g:vimmake_build_post` will be executed. It can be used to invoke a external program:
 
@@ -192,6 +194,22 @@ make $VIM_TARGET
 
 Ensure that `g:vimmake_mode["make"]` has been set to "quickfix" or "async" (vim 7.4.1829 or above) in your `.vimrc`, so that the output can be captured in the quickfix window.
 
+### Lookup keywords in man
+
+Create `"~/.vim/vimmake.man"` to check current word under cursor from `man` and output result to the quickfix window:
+
+```bash
+#! /bin/sh
+
+WIDTH=`expr $VIM_COLUMNS - 10`
+man -S 3:2:1 -P cat "$VIM_CWORD" | fold -w $WIDTH
+```
+
+Ensure that `g:vimmake_mode["make"]` has been set to "quickfix" or "async". `$VIM_CWORD` contains the word under cursor and `$VIM_COLUMNS` indicate vim's screen width.
+
+With `$$VIM_CWORD` you can do so many things like: lookup words from a manual for help, or a dictionary for translating, or just call an external grep-like program and get the output in quickfix window.
+
+
 ### Compile .go source
 
 Create `"~/.vim/vimmake.go"` to compile your file with `:VimTool go`:
@@ -201,7 +219,7 @@ Create `"~/.vim/vimmake.go"` to compile your file with `:VimTool go`:
 go build "$VIM_FILEPATH"
 ```
 
-Ensure that `g:vimmake_mode["go"]` has been set to "quickfix" or "async" (vim 7.4.1829 or above) in your `.vimrc`, so that output can be captured in the quickfix window.
+Ensure that `g:vimmake_mode["go"]` has been set to "quickfix" or "async", so that output can be captured in the quickfix window.
 
 ### Setup keymap
 
