@@ -378,7 +378,7 @@ let g:vimmake_build_post = 'silent !start playwav.exe "C:\Windows\Media\Windows 
 
 Choosing a sweet-sounding .wav file is important which will please you in your subconscious. It will encourage you to continue debug-compile-debug-compile even when you are exhausted from finding bugs.
 
-You can be more productive when you are using voice notifications. The more you use, the more you get happy, nothing can attract and stop you from your crazy edit-debug-edit-debug cycle.
+You can be more productive when you are using voice notifications. The more you use, the more you get happy, nothing can attract or stop you from your crazy edit-debug-edit-debug cycle.
 
 ## Misc
 
