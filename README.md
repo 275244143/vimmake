@@ -382,7 +382,7 @@ You can be more productive when you are using voice notifications. The more you 
 
 ## Misc
 
-Vimmake has been tested in console and gui version. You can use 'open' in mac os or '/usr/bin/gnome-terminal' in ubuntu to open a new window and execute your command. 
+Vimmake has been tested in console and gui version. You can use 'open' in mac os or '/usr/bin/gnome-terminal' in ubuntu to open a new window and execute your command from tool scripts. 
 
 As executing program in a new terminal window correctly is a little tricky thing, I create a script to let you open a new terminal window to execute your program in both Windows, Linux (ubuntu), Cygwin and Mac OS X, you can try it from: https://github.com/skywind3000/terminal.
 
