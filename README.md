@@ -174,7 +174,7 @@ When it is set to 1 for async building, quickfix window will scroll to last line
 When async building job is finished, script in `g:vimmake_build_post` will be executed. It can be used to invoke a external program:
 
 ```VimL
-let g:vimmake_build_post = "silent !afplay ~/.vim/notify.wav"
+let g:vimmake_build_post = "silent call system('afplay ~/.vim/notify.wav &')"
 ```
 
 Now `~/.vim/notify.wav` will be played to notify you the async job is finished now. 
