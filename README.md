@@ -4,7 +4,7 @@ Customize shell tools for vim. Similar to 'Run Commands' in NotePad++, 'User Too
 
 ## Preface
 
-This plugin is inspired by GEdit's `External Tool` which allows you to compile and run your project in a efficient way. Each tool is a single shell script defined by user which can be used to execute Makefile or compile/run a single file with customizable compile flags and run options. 
+This plugin is inspired by GEdit's `External Tool` which enables you to compile and run your project in a efficient way. Each tool is a single shell script defined by user which can be used to execute Makefile or compile/run a single file with customizable compile flags and run options. 
 
 Vim has numerous community plugins and I have tried some. Most of them are really great in certain extent but still cannot fully satisfy my need. Therefore I decided to reference their packages and make my own.
 
@@ -38,7 +38,7 @@ After changing file mode to 0755, you can launch it inside vim with the command 
 :VimTool gcc
 ```
 
-Command `VimTool {name}` will launch the script `"vimmake.{name}"` (or `"vimmake.{name}.cmd"` for windows) in the directory of `"~/.vim"` with the predefined environment variables:
+This command can be used to compile the current source file. You can bind it to a hotkey to speed up your compile-edit-compile cycle. The command `VimTool {name}` will launch the script `"vimmake.{name}"` (or `"vimmake.{name}.cmd"` for windows) in the directory of `"~/.vim"` with the predefined environment variables:
 
 | Environment Variable | Description |
 |----------------------|-------------|
@@ -51,9 +51,9 @@ Command `VimTool {name}` will launch the script `"vimmake.{name}"` (or `"vimmake
 | $VIM_RELDIR | File path relativize to current directory |
 | $VIM_RELNAME | File name relativize to current directory  |
 | $VIM_CWORD | Current word under cursor in the buffer |
-| $VIM_GUI | Is running under gui ? |
+| $VIM_GUI | Is it running in gui ? |
 | $VIM_VERSION | Value of v:version |
-| $VIM_MODE | Execute via 0:!, 1:makeprg, 2:system() |
+| $VIM_MODE | Execute via 0:bang(!), 1:makeprg, 2:system(), ... |
 | $VIM_SCRIPT | Home path of tool scripts |
 | $VIM_TARGET | Target given after name as ":VimTool {name} {target}" |
 
@@ -144,7 +144,86 @@ Now `~/.vim/notify.wav` will be played to notify you the async job is finished n
 
 ## Examples
 
-TODO
+### Execute current file
+
+Create `"~/.vim/vimmake.run"` to execute current file/buffer with command `:VimTool run`:
+
+```bash
+#! /bin/sh
+
+cd "$VIM_FILEDIR"
+
+case "$VIM_FILEEXT" in 
+	\.c|\.cpp|\.cc|\.cxx)
+		"$VIM_FILEDIR/$VIM_FILENOEXT"
+		;;
+	\.py|\.pyw)
+		python "$VIM_FILENAME"
+		;;
+	\.pl)
+		perl "$VIM_FILENAME"
+		;;
+	\.lua)
+		lua "$VIM_FILENAME"
+		;;
+	\.js)
+		node "$VIM_FILENAME"
+		;;
+	\.php)
+		php "$VIM_FILENAME"
+		;;
+	*)
+		echo "unknow"
+		;;
+esac
+
+```
+
+### Compile makefile
+
+Create `"~/.vim/vimmake.make"` to compile your makefile with `:VimTool make`:
+
+```bash
+#! /bin/sh
+make $VIM_TARGET
+```
+
+Ensure that `g:vimmake_mode["make"]` has been set to "quickfix" or "async" (vim 7.4.1829 or above) in your `.vimrc`, so that the output can be captured in the quickfix window.
+
+### Compile .go source
+
+Create `"~/.vim/vimmake.go"` to compile your file with `:VimTool go`:
+
+```bash
+#! /bin/sh
+go build "$VIM_FILEPATH"
+```
+
+Ensure that `g:vimmake_mode["make"]` has been set to "quickfix" or "async" (vim 7.4.1829 or above) in your `.vimrc`, so that output can be captured in the quickfix window.
+
+### Setup keymap
+
+Edit your `.vimrc` to configurate keymap:
+
+```VimL
+noremap <F7> :VimTool gcc<cr>
+noremap <F5> :VimTool run<cr>
+inoremap <F7> <ESC>:VimTool gcc<cr>
+inoremap <F5> <ESC>:VimTool run<cr>
+```
+
+Now you can have your F7/F5 to compile/run your source file.
+
+### Hotkey to toggle quickfix window
+ 
+Edit your `.vimrc` to configurate hotkey:
+
+```VimL
+noremap <F10> :silent call vimmake#Toggle_Quickfix()<cr>
+inoremap <F10> <ESC>:silent call vimmake#Toggle_Quickfix()<cr>
+```
+
+Quickfix window can be toggled by pressing F10, you can use quickfix window to view output and navigate errors (see `:help quickfix`).
 
 ## Misc
 
