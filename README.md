@@ -10,9 +10,9 @@ Vim has numerous community plugins and I have tried some. Most of them are reall
 
 ## Feature
 
-- Customize user tool to invoke compiler or other tools with current file/directory.
+- Customize user tool to invoke compiler or other tools with current buffer/directory.
 - Each tool can be created as a single shell script in unix like system or batch file in windows (.cmd/.bat).
-- Tools can be executed with given environment. 
+- Tools can be launched with given system environment variables
 - Output can be captured and display in the quickfix window. 
 - Launch mode can be configured as `sync`, `async` or `silent` (async with no output).
 - Error output can be matched in quickfix window.
@@ -23,9 +23,9 @@ Vim has numerous community plugins and I have tried some. Most of them are reall
 
 Copy vimmake.vim to your ~/.vim/plugin or using Vundle to install it from `skywind3000/vimmake` .
 
-## Setup
+## Tutorials
 
-Create a single shell script `~/.vim/vimmake.gcc` in `~/.vim`:
+Create a customize building tool by editing the shell script named `"~/.vim/vimmake.gcc"`:
 
 ```shell
 #! /bin/sh
@@ -38,7 +38,7 @@ After changing file mode to 0755, you can launch it inside vim with the command 
 :VimTool gcc
 ```
 
-Command `VimTool {name}` will launch the script `"vimmake.{name}"` in the directory of `"~/.vim"` with the predefined environment variables:
+Command `VimTool {name}` will launch the script `"vimmake.{name}"` (or `"vimmake.{name}.cmd"` for windows) in the directory of `"~/.vim"` with the predefined environment variables:
 
 | Environment Variable | Description |
 |----------------------|-------------|
@@ -57,7 +57,8 @@ Command `VimTool {name}` will launch the script `"vimmake.{name}"` in the direct
 | $VIM_SCRIPT | Home path of tool scripts |
 | $VIM_TARGET | Target given after name as ":VimTool {name} {target}" |
 
-You can setup as many tools as you wish to build your project makefile, or compile/run a single source file directly, or compile your latex, or run grep in current directory, passing current word under cursor to external man help / dictionary / other external scripts, or just call svn diff with current file and redirect the output to the bottom panel.
+
+You can setup as many tools as you wish to build your project makefile, or compile a single source file directly, or compile your latex, or run grep in current directory, passing current word under cursor to external man help / dictionary / other external scripts, or just call svn diff with current file and redirect the output to the bottom panel.
 
 ## Command
 
