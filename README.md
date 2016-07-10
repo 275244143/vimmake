@@ -11,10 +11,10 @@ Vim has numerous community plugins and I have tried some. Most of them are reall
 ## Feature
 
 - Customize user tool to invoke compiler or other tools with current buffer/directory.
-- Each tool can be created as a single shell script in unix like system or batch file in windows (.cmd/.bat).
+- Each tool can be created as a single shell script in unix like system or a batch file in windows (.cmd/.bat).
 - Tools can be launched with given system environment variables
 - Output can be captured and display in the quickfix window. 
-- Launch mode can be configured as `sync`, `async` or `silent` (async with no output).
+- Launch mode can be configured as `sync`, `async` or `silent` (run in background and discard output).
 - Error output can be matched in quickfix window.
 - Simple and lightweight.
 
@@ -27,20 +27,69 @@ Copy vimmake.vim to your ~/.vim/plugin or using Vundle to install it from `skywi
 
 Create a customize building tool by editing the shell script named `"~/.vim/vimmake.gcc"`:
 
-```shell
+```bash
 #! /bin/sh
 gcc "$VIM_FILEPATH" -o "$VIM_FILEDIR/$VIM_FILENOEXT"
 ```
 
-After changing file mode to 0755, you can launch it inside vim with the command `VimTool`:
+After changing file mode to 0755, you can launch it inside vim with the command `:VimTool`:
 
 ```
 :VimTool gcc
 ```
 
-This command can be used to compile the current source file. You can bind it to a hotkey to speed up your compile-edit-compile cycle. 
+It can be used to compile the current source file. Now we will edit `"~/.vim/vimmake.run"` to run our source:
 
-The command `VimTool {name}` will launch the script `"vimmake.{name}"` (or `"vimmake.{name}.cmd"` for windows) in the directory of `"~/.vim"` with the predefined environment variables:
+```bash
+#! /bin/sh
+"$VIM_FILEDIR/$VIM_FILENOEXT"
+```
+
+Remeber changing file mode to 0755, and you can launch it by `:VimTool run`. Now we have two tools named `gcc` and `run`, which can be executed directly inside vim.
+
+Wwe need capture the output of `gcc` to the quickfix window, just setup g:vimmake_mode in your `.vimrc`:
+
+```VimL
+let g:vimmake_mode = { 'gcc':'quickfix', 'run':'normal' }
+```
+
+Or use async-building mode (required vim 7.4.1829 or above), which will capture the output of background processes and redirect them into quickfix window in realtime:
+
+```VimL
+let g:vimmake_mode = { 'gcc':'async', 'run':'normal' }
+```
+
+At last, hotkeys can be setup in `.vimrc` to speed up your compile-edit-compile cycle:
+
+```VimL
+noremap <F7> :VimTool gcc<cr>
+noremap <F5> :VimTool run<cr>
+inoremap <F7> <ESC>:VimTool gcc<cr>
+inoremap <F5> <ESC>:VimTool run<cr>
+```
+
+Now you can have your F7/F5 to compile/run your source file.
+
+
+## Command
+
+### VimTool - launch the user tool 
+
+This will launch `"~/.vim/vimmake.{name}"` in unix and `"~/.vim/vimmake.{name}.cmd"` in window:
+
+```VimL
+:VimTool {name}
+```
+
+A `{target}` can also be passed after `{name}`, which will be used to initialize `$VIM_TARGET`:
+
+```VimL
+:VimTool {name} {target}
+```
+
+Script can use this value as build target and pass as a parameter of gnumake.
+
+The command `:VimTool` will setup the environment variables for launching:
 
 | Environment Variable | Description |
 |----------------------|-------------|
@@ -63,22 +112,6 @@ The command `VimTool {name}` will launch the script `"vimmake.{name}"` (or `"vim
 
 
 You can setup as many tools as you wish to build your project makefile, or compile a single source file directly, or compile your latex, or run grep in current directory, passing current word under cursor to external man help / dictionary / other external scripts, or just call svn diff with current file and redirect the output to the bottom panel.
-
-## Command
-
-### VimTool - launch the user tool 
-
-```VimL
-:VimTool {name}
-```
-
-This will launch `"~/.vim/vimmake.{name}"` in unix and `"~/.vim/vimmake.{name}.cmd"` in window.
-
-```VimL
-:VimTool {name} {target}
-```
-
-Launch `"~/.vim/vimmake.{name}"` and pass `{target}` in the system environment variable as `$VIM_TARGET`. Script can use this value as build target and pass as a parameter of gnumake.
 
 ### VimStop - stop the user tool in background
 
@@ -148,7 +181,7 @@ Now `~/.vim/notify.wav` will be played to notify you the async job is finished n
 
 ## Examples
 
-### Execute current file
+### Run current file
 
 Create `"~/.vim/vimmake.run"` to execute current file/buffer with command `:VimTool run`:
 
@@ -162,26 +195,30 @@ case "$VIM_FILEEXT" in
 		"$VIM_FILEDIR/$VIM_FILENOEXT"
 		;;
 	\.py|\.pyw)
-		python "$VIM_FILENAME"
+		python "$VIM_FILEPATH"
 		;;
 	\.pl)
-		perl "$VIM_FILENAME"
+		perl "$VIM_FILEPATH"
 		;;
 	\.lua)
-		lua "$VIM_FILENAME"
+		lua "$VIM_FILEPATH"
 		;;
 	\.js)
-		node "$VIM_FILENAME"
+		node "$VIM_FILEPATH"
 		;;
 	\.php)
-		php "$VIM_FILENAME"
+		php "$VIM_FILEPATH"
 		;;
 	*)
-		echo "unknow"
+		echo "unexpected file type: $VIM_FILEEXT"
 		;;
 esac
 
 ```
+
+We have a simple `run` script in tutorials and this is a more clever one. It detects file type with `$VIM_FILEEXT` and chooses the right way to run our file. And you can extend this script  easily for new file types.
+
+Shell scripts can be written not only in bash, but also in whatever language you like (eg. `#! /usr/bin/python` for python). Only need to ensure the file mode is 0755 (has execute permission).
 
 ### Compile makefile
 
