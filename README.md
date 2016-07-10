@@ -177,7 +177,7 @@ When async building job is finished, script in `g:vimmake_build_post` will be ex
 let g:vimmake_build_post = "silent call system('afplay ~/.vim/notify.wav &')"
 ```
 
-Now `~/.vim/notify.wav` will be played to notify you the async job is finished now. 
+Now `~/.vim/notify.wav` will be played to notify you the async job is finished now. `Afplay` is a command line utility to play .wav files in mac os x.
 
 
 ## Examples
@@ -329,7 +329,7 @@ GOTO END
 
 ```
 
-Ensure that `g:vimmake_mode["gcc"]` has been set to "quickfix" or "async" (vim 7.4.1829 or above) in your `.vimrc`, so that output can be captured in the quickfix window.
+Ensure that `g:vimmake_mode["gcc"]` has been set to "quickfix" or "async", so that output can be captured in the quickfix window.
 
 ### Invoke mingw in windows
 
@@ -347,6 +347,8 @@ echo missing file name
 
 :END
 ```
+
+Using the latest gvim in windows for async-jobs is recommended, you can download from [official gvim daily build](https://github.com/vim/vim-win32-installer/releases/).
 
 ## Misc
 
