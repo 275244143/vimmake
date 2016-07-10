@@ -298,6 +298,8 @@ function! Vimmake_Command(command, target, mode, match)
 	let $VIM_SCRIPT = g:vimmake_path
 	let $VIM_SVRNAME = v:servername
 	let $VIM_TARGET = a:target
+	let $VIM_COLUMNS = &columns
+	let $VIM_LINES = &lines
 	let l:text = ''
 	if has("gui_running")
 		let $VIM_GUI = '1'
