@@ -6,7 +6,7 @@ Customize shell tools for vim. Similar to 'Run Commands' in NotePad++, 'User Too
 
 This plugin is inspired by GEdit's `External Tool` which enables you to compile and run your project in a efficient way. Each tool is a single shell script defined by user which can be used to execute Makefile or compile/run a single file with customizable compile flags and run options. 
 
-Vim has numerous community plugins and I have tried some. Most of them are really great in certain extent but still cannot fully satisfy my need. Therefore I decided to reference their packages and make my own.
+Vim has numerous community plugins for building or running programs, and I have tried some. Most of them are really great in certain extent but still cannot fully satisfy my need. Therefore I decided to reference their packages and make my own.
 
 ## Feature
 
