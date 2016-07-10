@@ -376,7 +376,7 @@ let g:vimmake_build_post = 'silent !start playwav.exe "C:\Windows\Media\Windows 
 
 `playwav.exe` is a command line utility to play .wav files in windows. `playwav.exe` can be download [here](https://github.com/skywind3000/support/blob/master/tools/playwav.exe). 
 
-Choosing a sweet-sounding .wav file is important which will please you in your subconscious. It will encourage you to continue debug-compile-debug-compile when you are tired from finding bugs.
+Choosing a sweet-sounding .wav file is important which will please you in your subconscious. It will encourage you to continue debug-compile-debug-compile even when you are exhausted from finding bugs.
 
 You can be more productive when you are using voice notifications. The more you use, the more you get happy, nothing can attract and stop you from your crazy edit-debug-edit-debug cycle.
 
