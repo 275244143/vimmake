@@ -48,7 +48,7 @@ It can be used to compile the current source file. Now we will edit `"~/.vim/vim
 
 Remeber changing file mode to 0755, and you can launch it by `:VimTool run`. Now we have two tools named `gcc` and `run`, which can be executed directly inside vim.
 
-Wwe need capture the output of `gcc` to the quickfix window, just setup g:vimmake_mode in your `.vimrc`:
+We need capture the output of `gcc` to the quickfix window, just setup g:vimmake_mode in your `.vimrc`:
 
 ```VimL
 let g:vimmake_mode = { 'gcc':'quickfix', 'run':'normal' }
