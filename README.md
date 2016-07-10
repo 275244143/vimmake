@@ -274,7 +274,7 @@ Now you can have your F7/F5 to compile/run your source file.
 
 ### Hotkey to toggle quickfix window
  
-Edit your `.vimrc` to configurate hotkey:
+Edit your `.vimrc` to configurate keymaps:
 
 ```VimL
 noremap <F10> :silent call vimmake#Toggle_Quickfix()<cr>
