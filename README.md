@@ -54,7 +54,7 @@ We need capture the output of `gcc` to the quickfix window, just setup g:vimmake
 let g:vimmake_mode = { 'gcc':'quickfix', 'run':'normal' }
 ```
 
-Or use async-building mode (require vim 7.4.1829 or above), which will capture the output of background processes and redirect them into quickfix window in realtime:
+Or use async-building mode (require vim 7.4.1829 or above), which will launch `gcc` in background and redirect the output into quickfix window in realtime:
 
 ```VimL
 let g:vimmake_mode = { 'gcc':'async', 'run':'normal' }
