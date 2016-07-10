@@ -216,7 +216,7 @@ esac
 
 ```
 
-We have a simple `run` script in tutorials and this is a more clever one. It detects file type with `$VIM_FILEEXT` and chooses the right way to run our file. And you can extend this script  easily for new file types.
+We have a simple `run` script in tutorials and this is a more clever version. It detects file type with `$VIM_FILEEXT` and chooses the right way to run our file. And you can extend this script  easily for new file types.
 
 Shell scripts can be written not only in bash, but also in whatever language you like (eg. `#! /usr/bin/python` for python). Only need to ensure the file mode is 0755 (has execute permission).
 
