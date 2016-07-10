@@ -54,7 +54,7 @@ Wwe need capture the output of `gcc` to the quickfix window, just setup g:vimmak
 let g:vimmake_mode = { 'gcc':'quickfix', 'run':'normal' }
 ```
 
-Or use async-building mode (required vim 7.4.1829 or above), which will capture the output of background processes and redirect them into quickfix window in realtime:
+Or use async-building mode (require vim 7.4.1829 or above), which will capture the output of background processes and redirect them into quickfix window in realtime:
 
 ```VimL
 let g:vimmake_mode = { 'gcc':'async', 'run':'normal' }
@@ -217,7 +217,7 @@ esac
 
 ```
 
-We have a simple `run` script in tutorials and this is a more clever version. It detects file type with `$VIM_FILEEXT` and chooses the right way to run our file. And you can extend this script  easily for new file types.
+We have a simple `run` script in tutorials and this is a more clever version. It detects file type with `$VIM_FILEEXT` and chooses the right way to run. And you can extend this script easily for new file types.
 
 Shell scripts can be written not only in bash, but also in whatever language you like (eg. `#! /usr/bin/python` for python). Only need to ensure the file mode is 0755 (has execute permission).
 
