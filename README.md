@@ -201,7 +201,7 @@ Create `"~/.vim/vimmake.go"` to compile your file with `:VimTool go`:
 go build "$VIM_FILEPATH"
 ```
 
-Ensure that `g:vimmake_mode["make"]` has been set to "quickfix" or "async" (vim 7.4.1829 or above) in your `.vimrc`, so that output can be captured in the quickfix window.
+Ensure that `g:vimmake_mode["go"]` has been set to "quickfix" or "async" (vim 7.4.1829 or above) in your `.vimrc`, so that output can be captured in the quickfix window.
 
 ### Setup keymap
 
@@ -226,6 +226,71 @@ inoremap <F10> <ESC>:silent call vimmake#Toggle_Quickfix()<cr>
 ```
 
 Quickfix window can be toggled by pressing F10, you can use quickfix window to view output and navigate errors (see `:help quickfix`).
+
+### Run current file in windows
+
+Create a batch file named `"C:/Users/yourname/.vim/vimmake.run.cmd"`:
+
+```batch
+@ECHO OFF
+if "%VIM_FILENAME%" == "" GOTO ERROR_NO_FILE
+CD /D "%VIM_FILEDIR%"
+
+if "%VIM_FILEEXT%" == ".c" GOTO RUN_MAIN
+if "%VIM_FILEEXT%" == ".cpp" GOTO RUN_MAIN
+if "%VIM_FILEEXT%" == ".cc" GOTO RUN_MAIN
+if "%VIM_FILEEXT%" == ".cxx" GOTO RUN_MAIN
+if "%VIM_FILEEXT%" == ".py" GOTO RUN_PY
+if "%VIM_FILEEXT%" == ".pyw" GOTO RUN_PY
+if "%VIM_FILEEXT%" == ".bat" GOTO RUN_CMD
+if "%VIM_FILEEXT%" == ".cmd" GOTO RUN_CMD
+if "%VIM_FILEEXT%" == ".js" GOTO RUN_NODE
+
+echo unsupported file type %VIM_FILEEXT%
+GOTO END
+
+:RUN_MAIN
+"%VIM_FILENOEXT%"
+GOTO END
+
+:RUN_PY
+python "%VIM_FILENAME%"
+GOTO END
+
+:RUN_CMD
+cmd /C "%VIM_FILENAME%"
+GOTO END
+
+:RUN_NODE
+node.exe "%VIM_FILENAME%"
+GOTO END
+
+:ERROR_NO_FILE
+echo missing filename
+GOTO END
+
+:END
+
+```
+
+Ensure that `g:vimmake_mode["gcc"]` has been set to "quickfix" or "async" (vim 7.4.1829 or above) in your `.vimrc`, so that output can be captured in the quickfix window.
+
+### Invoke mingw in windows
+
+Create a batch file named `"C:/Users/yourname/.vim/vimmake.gcc.cmd"`:
+
+```batch
+@ECHO OFF
+if "%VIM_FILENAME%" == "" GOTO ERROR_NO_FILE
+
+d:\dev\mingw32\bin\gcc -Wall -O3 -std=c++11 "%VIM_FILEPATH%" -o "%VIM_FILEDIR%/%VIM_FILENOEXT%" -lwinmm -lstdc++ -lgdi32 -lws2_32 -msse3 -static
+GOTO END
+
+:ERROR_NO_FILE
+echo missing file name
+
+:END
+```
 
 ## Misc
 
