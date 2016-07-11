@@ -60,9 +60,11 @@ Or use async-building mode (require vim 7.4.1829 or above), which will launch `g
 let g:vimmake_mode = { 'gcc':'async', 'run':'normal' }
 ```
 
-Here we use `:VimTool gcc` to compile our source and then `:VimTool run` to run:
+After that, `:VimTool gcc` can run in async mode now, the experience is just like building project in IDEs:
 
 ![demo](https://raw.githubusercontent.com/skywind3000/vimmake/master/images/screen1.gif)
+
+Building while editing in the same time is difficult in the old days, but now vimmake enables you to take the advange of async jobs in a very simply way.  
 
 At last, hotkeys can be setup in `.vimrc` to speed up your edit-compile-run workflow:
 
@@ -364,7 +366,11 @@ Using the latest gvim in windows for async-jobs is recommended, you can download
 
 ### Run in New Terminal Window
 
+When you are editing a long-time-running program (eg. a HttpServer demo), a seperate terminal is needed if you are trying to run it after building. It's a good idea If we can open a new terminal window and run our program directly from vim.
 
+When you are using vimmake under gvim in windows, it will always open a new console if launch mode is `normal`:
+
+![demo](https://raw.githubusercontent.com/skywind3000/vimmake/master/images/screen2.gif)
 
 ## Playing Sound
 
