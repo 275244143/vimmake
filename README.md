@@ -371,7 +371,7 @@ It is useful while you are editing, you have your eyes looking at the source cod
 Using a voice notification may help you focus on the source code. In windows you need `:!start` to invoke an external command line tool asynchronous, see `:help !start`:
 
 ```VimL
-let g:vimmake_build_post = 'silent !start playwav.exe "C:\Windows\Media\Windows Error.wav" 200'
+let g:vimmake_build_post = 'silent !start playwav.exe "C:/Windows/Media/Windows Error.wav" 200'
 ```
 
 `playwav.exe` is a command line utility to play .wav files in windows. `playwav.exe` can be download [here](https://github.com/skywind3000/support/blob/master/tools/playwav.exe). 
