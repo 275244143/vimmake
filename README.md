@@ -60,7 +60,11 @@ Or use async-building mode (require vim 7.4.1829 or above), which will launch `g
 let g:vimmake_mode = { 'gcc':'async', 'run':'normal' }
 ```
 
-At last, hotkeys can be setup in `.vimrc` to speed up your compile-edit-compile cycle:
+Here we use `:VimTool gcc` to compile our source and then `:VimTool run` to run:
+
+![demo](https://raw.githubusercontent.com/skywind3000/vimmake/master/images/screen1.gif)
+
+At last, hotkeys can be setup in `.vimrc` to speed up your edit-compile-run workflow:
 
 ```VimL
 noremap <F7> :VimTool gcc<cr>
@@ -357,6 +361,10 @@ echo missing file name
 Ensure that `g:vimmake_mode["gcc"]` has been set to "quickfix" or "async", so that output can be captured in the quickfix window.
 
 Using the latest gvim in windows for async-jobs is recommended, you can download from [official gvim daily build](https://github.com/vim/vim-win32-installer/releases/).
+
+### Run in New Terminal Window
+
+
 
 ## Playing Sound
 
