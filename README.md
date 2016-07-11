@@ -22,7 +22,7 @@ Vim has numerous community plugins for building or running programs, and I have 
 
 ## Installation
 
-Copy vimmake.vim to your ~/.vim/plugin or using Vundle to install it from `skywind3000/vimmake` .
+Copy vimmake.vim to your ~/.vim/plugin or use Vundle to install it from `skywind3000/vimmake` .
 
 ## Tutorials
 
