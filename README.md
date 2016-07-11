@@ -196,19 +196,19 @@ case "$VIM_FILEEXT" in
 		"$VIM_FILEDIR/$VIM_FILENOEXT"
 		;;
 	\.py|\.pyw)
-		python "$VIM_FILEPATH"
+		python "$VIM_FILENAME"
 		;;
 	\.pl)
-		perl "$VIM_FILEPATH"
+		perl "$VIM_FILENAME"
 		;;
 	\.lua)
-		lua "$VIM_FILEPATH"
+		lua "$VIM_FILENAME"
 		;;
 	\.js)
-		node "$VIM_FILEPATH"
+		node "$VIM_FILENAME"
 		;;
 	\.php)
-		php "$VIM_FILEPATH"
+		php "$VIM_FILENAME"
 		;;
 	*)
 		echo "unexpected file type: $VIM_FILEEXT"
