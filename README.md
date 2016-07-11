@@ -395,7 +395,7 @@ When you are using vimmake under gvim in windows, it will always open a new cons
 
 ![demo](https://raw.githubusercontent.com/skywind3000/vimmake/master/images/screen2.gif)
 
-But if you are using gvim in ubuntu, you need write some extra code in your tool script, let edit a new file named `"~/.vim/vimmake.runwin"`:
+But if you are using gvim in ubuntu, you need write some extra code in your tool script, let edit a new file named `"~/.vim/vimmake.1"`:
 
 ```python
 #! /usr/bin/python
@@ -413,13 +413,13 @@ cmdline = 'gnome-terminal --command=\'%s\''%cmd
 os.system(cmdline)
 ```
 
-By using python to implement 'run in new window', we will call `gnome-terminal` with correct parameters. After changing file mode to 0755 we need set launch mode of `runwin` to `bg` in our `.vimrc`:
+By using python to implement 'run in new window', we will call `gnome-terminal` with correct parameters. After changing file mode to 0755 we need set launch mode of `1` to `bg` in our `.vimrc`:
 
 ```VimL
-let g:vimmake_mode['runwin']='bg'
+let g:vimmake_mode['1']='bg'
 ```
 
-When we are using `bg` launch mode in vimmake. The python script above will be launch in the background and any output will be discard, that means you will see nothing from vim's screen when you are using 'bg' launch mode. All we need is opening `gnome-terminal` and run our program:
+Launch mode `bg` means the python script above will be launched in the background and any output will be discard, so you will see nothing from vim's screen when you are using 'bg' mode. All we need is opening `gnome-terminal` and run our program:
 
 ![demo](https://raw.githubusercontent.com/skywind3000/vimmake/master/images/screen3.jpg)
 
