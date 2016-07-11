@@ -364,6 +364,25 @@ Ensure that `g:vimmake_mode["gcc"]` has been set to "quickfix" or "async", so th
 
 Using the latest gvim in windows for async-jobs is recommended, you can download from [official gvim daily build](https://github.com/vim/vim-win32-installer/releases/).
 
+### View building progress in the status line
+
+Async building jobs have three states: running, success and failure. You can edit your `.vimrc` to view these states in the quickfix windows' statusline:
+
+```VimL
+augroup QuickfixStatus
+	au! BufWinEnter quickfix setlocal 
+		\ statusline=%t\ [%{g:vimmake_build_status}]\ %{exists('w:quickfix_title')?\ '\ '.w:quickfix_title\ :\ ''}\ %=%-15(%l,%c%V%)\ %P
+augroup END
+```
+
+Global variable `g:vimmake_build_status` indicates the these three states:
+
+- running: set when a async building job is start
+- success: set when the tool script exit normally which exit code is 0
+- failure: set when the tool script exit abnormally which exit code is not 0
+
+Then building progress can be watched right on quickfix windows' statusline in realtime.
+
 ## Playing Sound
 
 We have `afplay` to play a wav file in mac os x to notify when async job finished:
