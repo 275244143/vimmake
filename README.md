@@ -364,14 +364,6 @@ Ensure that `g:vimmake_mode["gcc"]` has been set to "quickfix" or "async", so th
 
 Using the latest gvim in windows for async-jobs is recommended, you can download from [official gvim daily build](https://github.com/vim/vim-win32-installer/releases/).
 
-### Run in New Terminal Window
-
-When you are editing a long-time-running program (eg. a HttpServer demo), a seperate terminal is needed if you are trying to run it after building. It's a good idea If we can open a new terminal window and run our program directly from vim.
-
-When you are using vimmake under gvim in windows, it will always open a new console if launch mode is `normal`:
-
-![demo](https://raw.githubusercontent.com/skywind3000/vimmake/master/images/screen2.gif)
-
 ## Playing Sound
 
 We have `afplay` to play a wav file in mac os x to notify when async job finished:
@@ -394,13 +386,52 @@ Choosing a sweet-sounding .wav file is important which will please you in your s
 
 You can be more productive when you are using voice notifications. The more you use, the more you get happy, nothing can attract or stop you from your crazy edit-debug-edit-debug cycle.
 
+
+## Run in New Terminal Window
+
+When you are editing a long-time-running program (eg. a HttpServer demo), a seperate terminal is needed if you are trying to run it after building. It's a good idea If we can open a new terminal window and run our program directly from vim.
+
+When you are using vimmake under gvim in windows, it will always open a new console if launch mode is `normal`, it uses the command `:!start` in windows gvim:
+
+![demo](https://raw.githubusercontent.com/skywind3000/vimmake/master/images/screen2.gif)
+
+But if you are using gvim in ubuntu, you need write some extra code in your tool script, let edit a new file named `"~/.vim/vimmake.runwin"`:
+
+```python
+#! /usr/bin/python
+import sys, os
+
+VIM_FILEDIR=os.environ.get('VIM_FILEDIR', '')
+VIM_FILENAME=os.environ.get('VIM_FILENOEXT', '')
+
+cmd = "cd \"%s\"; %s/%s; read -n1 -rsp press\ any\ key\ to\ continue\ ..."
+cmd = cmd%(VIM_FILEDIR, VIM_FILEDIR, VIM_FILENAME)
+cmd = cmd.replace('\\', '\\\\').replace('"', "\\\"").replace("'", "\\\'")
+cmd = 'bash -c \"%s\"'%cmd
+
+cmdline = 'gnome-terminal --command=\'%s\''%cmd
+os.system(cmdline)
+```
+
+By using python to implement 'run in new window', we will call `gnome-terminal` with correct parameters. After changing file mode to 0755 we need set launch mode of `runwin` to `bg` in our `.vimrc`:
+
+```VimL
+let g:vimmake_mode['runwin']='bg'
+```
+
+When we are using `bg` launch mode in vimmake. The python script above will be launch in the background and any output will be discard, that means you will see nothing from vim's screen when you are using 'bg' launch mode. All we need is opening `gnome-terminal` and run our program:
+
+![demo](https://raw.githubusercontent.com/skywind3000/vimmake/master/images/screen3.jpg)
+
+In this way, you can launch a long-time-running program in a new open terminal while you are editing. The experience is just like debugging a console application in visual studio.
+
+You can use 'open' in mac os or '/usr/bin/gnome-terminal' in ubuntu to open a new window and execute the commands in your tool scripts.
+
+As executing program in a new terminal window correctly is a little tricky thing, I create a script to let you open a new terminal window and run your command in both Windows, Linux (ubuntu), Cygwin and Mac OS X, you can try it from: https://github.com/skywind3000/terminal.
+
 ## Misc
-
-Vimmake has been tested in console and gui version. You can use 'open' in mac os or '/usr/bin/gnome-terminal' in ubuntu to open a new window and execute your command from tool scripts. 
-
-As executing program in a new terminal window correctly is a little tricky thing, I create a script to let you open a new terminal window to execute your program in both Windows, Linux (ubuntu), Cygwin and Mac OS X, you can try it from: https://github.com/skywind3000/terminal.
-
-## Reference
 
 http://www.vim.org/scripts/script.php?script_id=5418, 
 Please vote it if you like it.  
+
+
