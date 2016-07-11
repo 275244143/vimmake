@@ -243,7 +243,7 @@ WIDTH=`expr $VIM_COLUMNS - 10`
 man -S 3:2:1 -P cat "$VIM_CWORD" | fold -w $WIDTH
 ```
 
-Ensure that `g:vimmake_mode["make"]` has been set to "quickfix" or "async". `$VIM_CWORD` contains the word under cursor and `$VIM_COLUMNS` indicate vim's screen width.
+Ensure that `g:vimmake_mode["man"]` has been set to "quickfix" or "async". `$VIM_CWORD` contains the word under cursor and `$VIM_COLUMNS` indicate vim's screen width.
 
 With `$$VIM_CWORD` you can do so many things like: lookup words from a manual for help, or a dictionary for translating, or just call an external grep-like program and get the output in quickfix window.
 
