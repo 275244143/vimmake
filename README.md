@@ -431,7 +431,10 @@ As executing program in a new terminal window correctly is a little tricky thing
 
 ## Misc
 
+Vimmake has been well tested under ubuntu, mac os x, windows and cygwin.
+
+Please vote it if you like it:
 http://www.vim.org/scripts/script.php?script_id=5418, 
-Please vote it if you like it.  
+
 
 
