@@ -329,7 +329,7 @@ function! Vimmake_Command(command, target, mode, match)
 		if s:vimmake_windows != 0
 			silent exec '!start /b cmd.exe /C '. l:cmd
 		else
-			system("". l:cmd . ' &')
+			call system("". l:cmd . ' &')
 		endif
 	elseif (a:mode == 4)
 		if s:vimmake_windows != 0
