@@ -39,7 +39,7 @@ After changing file mode to 0755, you can launch it inside vim with the command 
 :VimTool gcc
 ```
 
-It can be used to compile the current source file. Now we will edit `"~/.vim/vimmake.run"` to run our source:
+With the tool `gcc` above, we can compile the current source file. Now we will edit `"~/.vim/vimmake.run"` to run our source:
 
 ```bash
 #! /bin/sh
@@ -48,7 +48,7 @@ It can be used to compile the current source file. Now we will edit `"~/.vim/vim
 
 Remeber changing file mode to 0755, and you can launch it by `:VimTool run`. Now we have two tools named `gcc` and `run`, which can be executed directly inside vim.
 
-We need capture the output of `gcc` to the quickfix window, just setup g:vimmake_mode in your `.vimrc`:
+The output of `gcc` need to be captured and redirected to the quickfix window, let's setup g:vimmake_mode in the `.vimrc`:
 
 ```VimL
 let g:vimmake_mode = { 'gcc':'quickfix', 'run':'normal' }
@@ -66,7 +66,7 @@ After that, `:VimTool gcc` can run in async mode now, the experience is just lik
 
 Building while editing in the same time is difficult in the old days, but now vimmake enables you to take the advange of async jobs in a very simply way.  
 
-At last, hotkeys can be setup in `.vimrc` to speed up your edit-compile-run workflow:
+In addition, keymaps can be setup in `.vimrc` to speed up your edit-compile-run workflow:
 
 ```VimL
 noremap <F7> :VimTool gcc<cr>
@@ -75,7 +75,7 @@ inoremap <F7> <ESC>:VimTool gcc<cr>
 inoremap <F5> <ESC>:VimTool run<cr>
 ```
 
-Now you can have your F7/F5 to compile/run your source file.
+Now you can have your F7/F5 to compile/run your source file. 
 
 
 ## Command
@@ -165,7 +165,7 @@ This option allows you to change the home directory of tools rather than `"~/.vi
 let g:vimmake_path = '/home/myname/github/config/tools'
 ```
 
-Now `:VimTool {name}` will launch `vimmake.{name}` from `"/home/myname/github/config/tools"`. so you can put your tool scripts into some git/svn repositories and get it sync every where.
+Now `:VimTool {name}` will launch `vimmake.{name}` from `"/home/myname/github/config/tools"`. Therefor, you can put your tool scripts into some git/svn repositories and sync every where.
 
 ### g:vimmake_save (int) - save before launch ?
 
