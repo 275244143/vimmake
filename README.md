@@ -374,7 +374,7 @@ Using a voice notification may help you focus on the source code. In windows you
 let g:vimmake_build_post = 'silent !start playwav.exe "C:/Windows/Media/Windows Error.wav" 200'
 ```
 
-`playwav.exe` is a command line utility to play .wav files in windows. `playwav.exe` can be download [here](https://github.com/skywind3000/support/blob/master/tools/playwav.exe). 
+`playwav.exe` is a command line utility to play .wav files in windows which can be downloaded  from [here](https://github.com/skywind3000/support/blob/master/tools/playwav.exe). 
 
 Choosing a sweet-sounding .wav file is important which will please you in your subconscious. It will encourage you to continue debug-compile-debug-compile even when you are exhausted from finding bugs.
 
