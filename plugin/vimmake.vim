@@ -15,7 +15,8 @@
 "     $VIM_CWD       - Current directory
 "     $VIM_RELDIR    - File path relativize to current directory
 "     $VIM_RELNAME   - File name relativize to current directory 
-"     $VIM_CWORD     - Current word in the buffer
+"     $VIM_CWORD     - Current word under cursor
+"     $VIM_CFILE     - Current filename under cursor
 "     $VIM_GUI       - Is running under gui ?
 "     $VIM_VERSION   - Value of v:version
 "     $VIM_MODE      - Execute via 0:!, 1:makeprg, 2:system()
@@ -294,6 +295,7 @@ function! Vimmake_Command(command, target, mode, match)
 	let $VIM_RELDIR = expand("%:h")
 	let $VIM_RELNAME = expand("%:p:.")
 	let $VIM_CWORD = expand("<cword>")
+	let $VIM_CFILE = expand("<cfile>")
 	let $VIM_VERSION = ''.v:version
 	let $VIM_MODE = ''. a:mode
 	let $VIM_GUI = '0'
@@ -1009,6 +1011,41 @@ command! -nargs=1 GrepCode call s:Cmd_GrepCode(<f-args>)
 
 
 "----------------------------------------------------------------------
+" cscope easy
+"----------------------------------------------------------------------
+function! s:Cmd_VimScope(what, name)
+	let l:text = ''
+	if a:what == '0' || a:what == 's'
+		let l:text = 'symbol "'.a:name.'"'
+	elseif a:what == '1' || a:what == 'g'
+		let l:text = 'definition of "'.a:name.'"'
+	elseif a:what == '2' || a:what == 'd'
+		let l:text = 'functions called by "'.a:name.'"'
+	elseif a:what == '3' || a:what == 'c'
+		let l:text = 'functions calling "'.a:name.'"'
+	elseif a:what == '4' || a:what == 't'
+		let l:text = 'string "'.a:name.'"'
+	elseif a:what == '6' || a:what == 'e'
+		let l:text = 'egrep "'.a:name.'"'
+	elseif a:what == '7' || a:what == 'f'
+		let l:text = 'file "'.a:name.'"'
+	elseif a:what == '8' || a:what == 'i'
+		let l:text = 'files including "'.a:name.'"'
+	elseif a:what == '9' || a:what == 'a'
+		let l:text = 'assigned "'.a:name
+	endif
+	silent cexpr "[cscope ".a:what.": ".l:text."]"
+	try
+		exec 'cs find '.a:what.' '.fnameescape(a:name)
+	catch /^Vim\%((\a\+)\)\=:E259/
+		silent caddexpr 'not find "'.a:name.'"'
+	endtry
+endfunc
+
+command! -nargs=* VimScope call s:Cmd_VimScope(<f-args>)
+
+
+"----------------------------------------------------------------------
 " Keymap Setup
 "----------------------------------------------------------------------
 function! s:Cmd_MakeKeymap()
@@ -1040,30 +1077,23 @@ function! s:Cmd_MakeKeymap()
 
 	" set keymap to cscope
 	if has("cscope")
-		noremap <leader>cs :cs find s <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>cg :cs find g <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>cc :cs find c <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>ct :cs find t <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>ce :cs find e <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>cf :cs find f <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>ci :cs find i <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>cd :cs find d <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>ss :vert scs find s <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>sg :vert scs find g <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>sc :vert scs find c <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>st :vert scs find t <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>se :vert scs find e <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>sf :vert scs find f <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>si :vert scs find i <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>sd :vert scs find d <C-R>=expand("<cword>")<CR><CR>
-		set cscopequickfix=s-,c-,d-,i-,t-,e-
+		noremap <leader>cs :VimScope s <C-R>=expand("<cword>")<CR><CR>
+		noremap <leader>cg :VimScope g <C-R>=expand("<cword>")<CR><CR>
+		noremap <leader>cc :VimScope c <C-R>=expand("<cword>")<CR><CR>
+		noremap <leader>ct :VimScope t <C-R>=expand("<cword>")<CR><CR>
+		noremap <leader>ce :VimScope e <C-R>=expand("<cword>")<CR><CR>
+		noremap <leader>cf :VimScope f <C-R>=expand("<cword>")<CR><CR>
+		noremap <leader>ci :VimScope i <C-R>=expand("<cword>")<CR><CR>
+		noremap <leader>cd :VimScope d <C-R>=expand("<cword>")<CR><CR>
+		noremap <leader>ca :VimScope a <C-R>=expand("<cword>")<CR><CR>
+		set cscopequickfix=s+,c+,d+,i+,t+,e+,g+
 		set csto=0
 		set cst
 		set csverb
 	endif
 	
 	" cscope update
-	noremap <leader>ca :call vimmake#Update_Tags('.tags', '')<cr>
+	noremap <leader>cb :call vimmake#Update_Tags('.tags', '')<cr>
 	noremap <leader>cm :call vimmake#Update_Tags('', '.cscope')<cr>
 endfunc
 
