@@ -1038,7 +1038,17 @@ function! s:Cmd_VimScope(what, name)
 	try
 		exec 'cs find '.a:what.' '.fnameescape(a:name)
 	catch /^Vim\%((\a\+)\)\=:E259/
-		silent caddexpr 'not find "'.a:name.'"'
+		echohl ErrorMsg
+		echo "E259: not find "'.a:name.'"'
+		echohl NONE
+	catch /^Vim\%((\a\+)\)\=:E567/
+		echohl ErrorMsg
+		echo "E567: no cscope connections"
+		echohl NONE
+	catch /^Vim\%((\a\+)\)\=:E/
+		echohl ErrorMsg
+		echo "ERROR: cscope error"
+		echohl NONE
 	endtry
 endfunc
 
