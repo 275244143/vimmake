@@ -1096,7 +1096,11 @@ function! s:Cmd_MakeKeymap()
 		noremap <leader>ci :VimScope i <C-R>=expand("<cword>")<CR><CR>
 		noremap <leader>cd :VimScope d <C-R>=expand("<cword>")<CR><CR>
 		noremap <leader>ca :VimScope a <C-R>=expand("<cword>")<CR><CR>
-		set cscopequickfix=s+,c+,d+,i+,t+,e+,g+
+		if has('patch-7.4.2038')
+			set cscopequickfix=s+,c+,d+,i+,t+,e+,g+,a+
+		else
+			set cscopequickfix=s+,c+,d+,i+,t+,e+,g+
+		endif
 		set csto=0
 		set cst
 		set csverb
