@@ -1032,7 +1032,7 @@ function! s:Cmd_VimScope(what, name)
 	elseif a:what == '8' || a:what == 'i'
 		let l:text = 'files including "'.a:name.'"'
 	elseif a:what == '9' || a:what == 'a'
-		let l:text = 'assigned "'.a:name
+		let l:text = 'assigned "'.a:name.'"'
 	endif
 	silent cexpr "[cscope ".a:what.": ".l:text."]"
 	try
