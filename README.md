@@ -2,8 +2,6 @@
 
 Customize shell tools for vim. Similar to 'Run Commands' in NotePad++, 'User Tool' in EditPlus/UltraEdit, 'External Tool' in GEdit and 'Shell Commands' in TextMate. 
 
-[点击阅读中文文档](https://github.com/skywind3000/vimmake/blob/master/README.cn.md)
-
 ## Preface
 
 This plugin is inspired by GEdit's `External Tool` which enables you to compile and run your project in a efficient way. Each tool is represented by a single shell script created by user which can be used to execute Makefile or compile/run a single file with customizable compile flags and run options. 
