@@ -1092,14 +1092,14 @@ function! s:Cmd_MakeKeymap()
 		noremap <leader>cc :VimScope c <C-R>=expand("<cword>")<CR><CR>
 		noremap <leader>ct :VimScope t <C-R>=expand("<cword>")<CR><CR>
 		noremap <leader>ce :VimScope e <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>cf :VimScope f <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>ci :VimScope i <C-R>=expand("<cword>")<CR><CR>
 		noremap <leader>cd :VimScope d <C-R>=expand("<cword>")<CR><CR>
 		noremap <leader>ca :VimScope a <C-R>=expand("<cword>")<CR><CR>
+		noremap <leader>cf :VimScope f <C-R>=expand("<cfile>")<CR><CR>
+		noremap <leader>ci :VimScope i <C-R>=expand("<cfile>")<CR><CR>
 		if has('patch-7.4.2038')
-			set cscopequickfix=s+,c+,d+,i+,t+,e+,g+,a+
+			set cscopequickfix=s+,c+,d+,i+,t+,e+,g+,f+,a+
 		else
-			set cscopequickfix=s+,c+,d+,i+,t+,e+,g+
+			set cscopequickfix=s+,c+,d+,i+,t+,e+,g+,f+
 		endif
 		set csto=0
 		set cst
