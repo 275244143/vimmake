@@ -606,7 +606,7 @@ function! g:Vimmake_Build_Start(cmd)
 			if s:vimmake_windows == 0
 				let l:temp = []
 				for l:item in a:cmd
-					if l:item != '|'
+					if index(['|', '`'], l:item) < 0
 						let l:temp += [fnameescape(l:item)]
 					else
 						let l:temp += ['|']
