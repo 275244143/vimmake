@@ -1061,13 +1061,13 @@ function! s:Cmd_MakeKeymap()
 	noremap <silent><F7> :VimBuild emake<cr>
 	noremap <silent><F8> :VimExecute emake<cr>
 	noremap <silent><F9> :VimBuild gcc<cr>
-	noremap <silent><F10> :call vimmake#Toggle_Quickfix()<cr>
+	noremap <silent><F10> :call vimmake#Toggle_Quickfix(6)<cr>
 	inoremap <silent><F5> <ESC>:VimExecute run<cr>
 	inoremap <silent><F6> <ESC>:VimExecute filename<cr>
 	inoremap <silent><F7> <ESC>:VimBuild emake<cr>
 	inoremap <silent><F8> <ESC>:VimExecute emake<cr>
 	inoremap <silent><F9> <ESC>:VimBuild gcc<cr>
-	inoremap <silent><F10> <ESC>:call vimmake#Toggle_Quickfix()<cr>
+	inoremap <silent><F10> <ESC>:call vimmake#Toggle_Quickfix(6)<cr>
 
 	noremap <silent><F11> :cp<cr>
 	noremap <silent><F12> :cn<cr>
@@ -1117,25 +1117,32 @@ endfunc
 function! vimmake#Load()
 endfunc
 
-function! vimmake#Toggle_Quickfix()
-	let l:open = 0
-	if exists('b:quickfix_open')
-		if b:quickfix_open != 0
-			let l:open = 1
+function! vimmake#Toggle_Quickfix(size)
+	function! s:WindowCheck(mode)
+		if getbufvar('%', '&buftype') == 'quickfix'
+			let s:quickfix_open = 1
+			return
 		endif
-	endif
-	if l:open == 0
-		exec "botright copen 6"
-		exec "wincmd k"
-		if &number == 0
-			set number
+		if a:mode == 0
+			let w:quickfix_pos1 = getcurpos()
+			normal! H
+			let w:quickfix_pos2 = getcurpos()
+		else
+			call setpos('.', w:quickfix_pos2)
+			call setpos('.', w:quickfix_pos1)
 		endif
-		set laststatus=2
-		let b:quickfix_open = 1
+	endfunc
+	let s:quickfix_open = 0
+	let l:winnr = winnr()			
+	windo call s:WindowCheck(0)
+	if s:quickfix_open == 0
+		exec 'botright copen '.a:size
+		wincmd k
 	else
-		exec "cclose"
-		let b:quickfix_open = 0
+		cclose
 	endif
+	windo call s:WindowCheck(1)
+	silent exec ''.l:winnr.'wincmd w'
 endfunc
 
 function! vimmake#Update_FileList(outname)
