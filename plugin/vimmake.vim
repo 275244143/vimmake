@@ -1124,12 +1124,9 @@ function! vimmake#Toggle_Quickfix(size)
 			return
 		endif
 		if a:mode == 0
-			let w:quickfix_pos1 = getcurpos()
-			normal! H
-			let w:quickfix_pos2 = getcurpos()
+			let w:quickfix_save = winsaveview()
 		else
-			call setpos('.', w:quickfix_pos2)
-			call setpos('.', w:quickfix_pos1)
+			call winrestview(w:quickfix_save)
 		endif
 	endfunc
 	let s:quickfix_open = 0
