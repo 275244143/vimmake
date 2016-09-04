@@ -899,7 +899,7 @@ if !exists('g:vimmake_build_mode')
 	let g:vimmake_build_mode = 0
 endif
 
-function! s:Cmd_VimMake(bang, ...)
+function! s:Cmd_VimMake(bang, mods, ...)
 	let l:cmd = []
 	if a:0 == 0
 		echohl ErrorMsg
@@ -909,6 +909,10 @@ function! s:Cmd_VimMake(bang, ...)
 	endif
 	if a:bang != '!'
 		silent call s:CheckSave()
+	endif
+	let l:mode = g:vimmake_build_mode
+	if a:mods == 'verbose'
+		let l:mode = 2
 	endif
 	for l:index in range(a:0)
 		let l:item = a:{l:index + 1}
@@ -924,9 +928,9 @@ function! s:Cmd_VimMake(bang, ...)
 		endif
 		let l:cmd += [l:name]
 	endfor
-	if g:vimmake_build_mode == 0 && s:vimmake_advance != 0
+	if l:mode == 0 && s:vimmake_advance != 0
 		call Vimmake_Command(l:cmd, '', 6)
-	elseif g:vimmake_build_mode <= 1 && has('quickfix')
+	elseif l:mode <= 1 && has('quickfix')
 		call Vimmake_Command(l:cmd, '', 1)
 	else
 		call Vimmake_Command(l:cmd, '', 0)
@@ -934,7 +938,8 @@ function! s:Cmd_VimMake(bang, ...)
 endfunc
 
 
-command! -bang -nargs=* VimMake call s:Cmd_VimMake('<bang>', <f-args>)
+command! -bang -nargs=* VimMake 
+	\ call s:Cmd_VimMake("<bang>", <q-mods>, <f-args>)
 
 
 "----------------------------------------------------------------------
