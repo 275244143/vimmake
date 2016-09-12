@@ -1144,7 +1144,10 @@ function! vimmake#Toggle_Quickfix(size)
 		cclose
 	endif
 	windo call s:WindowCheck(1)
-	silent exec ''.l:winnr.'wincmd w'
+	try
+		silent exec ''.l:winnr.'wincmd w'
+	catch /.*/
+	endtry
 endfunc
 
 function! vimmake#Update_FileList(outname)
