@@ -900,6 +900,24 @@ if !exists('g:vimmake_build_mode')
 endif
 
 function! s:Cmd_VimMake(bang, mods, ...)
+	let l:macros = { 'VIM_GUI' : '0' }
+	let l:macros['VIM_FILEPATH'] = expand("%:p")
+	let l:macros['VIM_FILENAME'] = expand("%:t")
+	let l:macros['VIM_FILEDIR'] = expand("%:p:h")
+	let l:macros['VIM_FILENOEXT'] = expand("%:t:r")
+	let l:macros['VIM_FILEEXT'] = "." . expand("%:e")
+	let l:macros['VIM_CWD'] = getcwd()
+	let l:macros['VIM_RELDIR'] = expand("%:h:.")
+	let l:macros['VIM_RENAME'] = expand("%:p:.")
+	let l:macros['VIM_CWORD'] = expand("<cword>")
+	let l:macros['VIM_CFILE'] = expand("<cfile>")
+	let l:macros['VIM_VERSION'] = ''.v:version
+	let l:macros['VIM_SVRNAME'] = v:servername
+	let l:macros['VIM_COLUMNS'] = ''.&columns
+	let l:macros['VIM_LINES'] = ''.&lines
+	if has('gui_running')
+		let l:macros['VIM_GUI'] = '1'
+	endif
 	let l:cmd = []
 	if a:0 == 0
 		echohl ErrorMsg
@@ -926,6 +944,10 @@ function! s:Cmd_VimMake(bang, mods, ...)
 		elseif (l:item[0] == '<') && (l:item[-1:] == '>')
 			let l:name = expand(l:item)
 		endif
+		for [l:key, l:val] in items(l:macros)
+			let l:replace = "$(" . l:key . ")"
+			let l:name = substitute(l:name, l:replace, l:val, 'g')
+		endfor
 		let l:cmd += [l:name]
 	endfor
 	if l:mode == 0 && s:vimmake_advance != 0
@@ -938,7 +960,7 @@ function! s:Cmd_VimMake(bang, mods, ...)
 endfunc
 
 
-command! -bang -nargs=* VimMake 
+command! -bang -nargs=* -complete=file VimMake 
 	\ call s:Cmd_VimMake("<bang>", <q-mods>, <f-args>)
 
 
