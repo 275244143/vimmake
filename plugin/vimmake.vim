@@ -935,7 +935,10 @@ function! s:Cmd_VimMake(bang, mods, ...)
 	for l:index in range(a:0)
 		let l:item = a:{l:index + 1}
 		let l:name = l:item
-		if index(['%', '%<', '#', '#<'], l:item) >= 0
+		if l:item == '<exe>'
+			let l:mode = 2
+			continue
+		elseif index(['%', '%<', '#', '#<'], l:item) >= 0
 			let l:name = expand(l:item)
 		elseif index(['%:', '#:'], l:item[:1]) >= 0
 			let l:name = expand(l:item)
@@ -960,8 +963,13 @@ function! s:Cmd_VimMake(bang, mods, ...)
 endfunc
 
 
-command! -bang -nargs=* -complete=file VimMake 
-	\ call s:Cmd_VimMake("<bang>", <q-mods>, <f-args>)
+if has('patch-7.4.1900')
+	command! -bang -nargs=+ -complete=file VimMake 
+		\ call s:Cmd_VimMake("<bang>", <q-mods>, <f-args>)
+else
+	command! -bang -nargs=+ -complete=file VimMake 
+		\ call s:Cmd_VimMake("<bang>", '', <f-args>)
+endif
 
 
 "----------------------------------------------------------------------
