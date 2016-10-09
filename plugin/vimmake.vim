@@ -949,7 +949,8 @@ function! s:Cmd_VimMake(bang, mods, ...)
 		endif
 		for [l:key, l:val] in items(l:macros)
 			let l:replace = "$(" . l:key . ")"
-			let l:name = substitute(l:name, l:replace, l:val, 'g')
+			let l:data = split(l:name, l:replace, 1)
+			let l:name = join(l:data, l:val)
 		endfor
 		let l:cmd += [l:name]
 	endfor
