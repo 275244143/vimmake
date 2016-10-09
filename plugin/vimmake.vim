@@ -957,8 +957,10 @@ function! s:Cmd_VimMake(bang, mods, ...)
 		call Vimmake_Command(l:cmd, '', 6)
 	elseif l:mode <= 1 && has('quickfix')
 		call Vimmake_Command(l:cmd, '', 1)
-	else
+	elseif l:mode <= 2
 		call Vimmake_Command(l:cmd, '', 0)
+	else
+		call Vimmake_Command(l:cmd, '', 3)
 	endif
 endfunc
 
