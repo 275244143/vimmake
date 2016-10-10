@@ -442,10 +442,12 @@ endfunc
 " invoked on timer or finished
 function! s:Vimmake_Build_Update(count)
 	let l:count = 0
+	let l:total = 0
 	while s:build_tail < s:build_head
 		let l:text = s:build_output[s:build_tail]
 		if l:text != '' 
 			caddexpr l:text
+			let l:total += 1
 		endif
 		unlet s:build_output[s:build_tail]
 		let s:build_tail += 1
@@ -454,7 +456,7 @@ function! s:Vimmake_Build_Update(count)
 			break
 		endif
 	endwhile
-	if and(g:vimmake_build_scroll, 1) != 0
+	if and(g:vimmake_build_scroll, 1) != 0 && l:total > 0
 		call s:Vimmake_Build_AutoScroll()
 	endif
 	if and(g:vimmake_build_scroll, 8) != 0
