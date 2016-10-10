@@ -649,7 +649,7 @@ function! g:Vimmake_Build_Start(cmd)
 			if g:vimmake_build_timer > 0
 				let l:options = {'repeat':-1}
 				let l:name = 'g:Vimmake_Build_OnTimer'
-				let s:build_timer = timer_start(1000, l:name, l:options)
+				let s:build_timer = timer_start(100, l:name, l:options)
 			endif
 			let s:build_state = 1
 			let g:vimmake_build_status = "running"
