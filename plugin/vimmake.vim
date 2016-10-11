@@ -453,16 +453,28 @@ function! s:Vimmake_Build_AutoScroll()
 	endif
 endfunc
 
-" check cursor in quick is on the last line
+" check if quickfix window can scroll now
 function! s:Vimmake_Build_CheckScroll()
 	if g:vimmake_build_last == 0
 		return 1
-	else
+	elseif g:vimmake_build_last == 1
 		let s:build_last = 1
 		let l:winnr = winnr()
 		windo call s:Vimmake_Build_Cursor()
 		silent exec ''.l:winnr.'wincmd w'
 		return s:build_last
+	elseif g:vimmake_build_last == 2
+		if &buftype == 'quickfix'
+			return (line('.') == line('$'))
+		else
+			return 1
+		endif
+	else
+		if &buftype == 'quickfix'
+			return (line('.') == line('$'))
+		else
+			return (!pumvisible())
+		endif
 	endif
 endfunc
 
