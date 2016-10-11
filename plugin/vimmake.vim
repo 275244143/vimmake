@@ -110,6 +110,11 @@ if !exists('g:vimmake_build_stop')
 	let g:vimmake_build_stop = 'term'
 endif
 
+" check cursor of quickfix window in last line
+if !exists('g:vimmake_build_last')
+	let g:vimmake_build_last = 0
+endif
+
 " build status
 if !exists('g:vimmake_build_status')
 	let g:vimmake_build_status = ''
@@ -428,6 +433,15 @@ function! s:Vimmake_Build_Scroll()
 	endif
 endfunc
 
+" check last line
+function! s:Vimmake_Build_Cursor()
+	if &ft == 'qf'
+		if line('.') != line('$')
+			let s:build_last = 0
+		endif
+	endif
+endfunc
+
 " find quickfix window and scroll to the bottom then return last window
 function! s:Vimmake_Build_AutoScroll()
 	if s:build_quick == 0
@@ -439,10 +453,24 @@ function! s:Vimmake_Build_AutoScroll()
 	endif
 endfunc
 
+" check cursor in quick is on the last line
+function! s:Vimmake_Build_CheckScroll()
+	if g:vimmake_build_last == 0
+		return 1
+	else
+		let s:build_last = 1
+		let l:winnr = winnr()
+		windo call s:Vimmake_Build_Cursor()
+		silent exec ''.l:winnr.'wincmd w'
+		return s:build_last
+	endif
+endfunc
+
 " invoked on timer or finished
 function! s:Vimmake_Build_Update(count)
 	let l:count = 0
 	let l:total = 0
+	let l:check = s:Vimmake_Build_CheckScroll()
 	while s:build_tail < s:build_head
 		let l:text = s:build_output[s:build_tail]
 		if l:text != '' 
@@ -456,11 +484,13 @@ function! s:Vimmake_Build_Update(count)
 			break
 		endif
 	endwhile
-	if and(g:vimmake_build_scroll, 1) != 0 && l:total > 0
-		call s:Vimmake_Build_AutoScroll()
-	endif
-	if and(g:vimmake_build_scroll, 8) != 0
-		silent clast
+	if l:check != 0
+		if and(g:vimmake_build_scroll, 1) != 0 && l:total > 0
+			call s:Vimmake_Build_AutoScroll()
+		endif
+		if and(g:vimmake_build_scroll, 8) != 0
+			silent clast
+		endif
 	endif
 	if g:vimmake_build_update != ''
 		exec g:vimmake_build_update
@@ -519,6 +549,7 @@ function! s:Vimmake_Build_OnFinish(what)
 	call s:Vimmake_Build_Update(-1)
 	let l:current = float2nr(reltimefloat(reltime()))
 	let l:last = l:current - s:build_start
+	let l:check = s:Vimmake_Build_CheckScroll()
 	if s:build_code == 0
 		caddexpr "[Finished in ".l:last." seconds]"
 		let g:vimmake_build_status = "success"
@@ -528,11 +559,13 @@ function! s:Vimmake_Build_OnFinish(what)
 		let g:vimmake_build_status = "failure"
 	endif
 	let s:build_state = 0
-	if and(g:vimmake_build_scroll, 1) != 0
-		call s:Vimmake_Build_AutoScroll()
-	endif
-	if and(g:vimmake_build_scroll, 4) != 0
-		silent clast
+	if l:check != 0
+		if and(g:vimmake_build_scroll, 1) != 0
+			call s:Vimmake_Build_AutoScroll()
+		endif
+		if and(g:vimmake_build_scroll, 4) != 0
+			silent clast
+		endif
 	endif
 	if g:vimmake_build_bell != 0
 		exec 'norm! \<esc>'
