@@ -456,7 +456,11 @@ endfunc
 " check if quickfix window can scroll now
 function! s:Vimmake_Build_CheckScroll()
 	if g:vimmake_build_last == 0
-		return 1
+		if &buftype == 'quickfix'
+			return (line('.') == line('$'))
+		else
+			return 1
+		endif
 	elseif g:vimmake_build_last == 1
 		let s:build_last = 1
 		let l:winnr = winnr()
@@ -464,11 +468,7 @@ function! s:Vimmake_Build_CheckScroll()
 		silent exec ''.l:winnr.'wincmd w'
 		return s:build_last
 	elseif g:vimmake_build_last == 2
-		if &buftype == 'quickfix'
-			return (line('.') == line('$'))
-		else
-			return 1
-		endif
+		return 1
 	else
 		if &buftype == 'quickfix'
 			return (line('.') == line('$'))
