@@ -642,9 +642,9 @@ function! g:Vimmake_Build_Start(cmd)
 		let l:args = []
 		let l:name = []
 		if has('win32') || has('win64') || has('win16') || has('win95')
-			let l:args = ['cmd.exe', '/C']
+			let l:args = [&shell, &shellcmdflag]
 		else
-			let l:args = ['/bin/sh', '-c']
+			let l:args = [&shell, &shellcmdflag]
 		endif
 		if type(a:cmd) == 1
 			let l:args += [a:cmd]
