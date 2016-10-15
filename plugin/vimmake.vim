@@ -317,7 +317,7 @@ function! Vimmake_Command(command, target, mode)
 		let $VIM_GUI = '1'
 	endif
 	if type(a:command) == 1
-		let l:cmd = shellescape(a:command)
+		let l:cmd = a:command
 	else
 		let l:tmp = []
 		for l:item in a:command
@@ -326,24 +326,20 @@ function! Vimmake_Command(command, target, mode)
 		let l:cmd = join(l:tmp, ' ')
 	endif
 	if (a:mode == 0) || ((!has("quickfix")) && a:mode == 1)
-		if has('gui_running') && (s:vimmake_windows != 0)
-			if type(a:command) == 1
-				silent exec '!start cmd /c '. l:cmd . ' & pause'
+		if s:vimmake_windows != 0 && has('gui_running')
+			let l:tmp = fnamemodify(tempname(), ':h') . '\vimmake.cmd'
+			let l:run = ['@echo off', l:cmd, 'pause']
+			if v:version >= 700
+				call writefile(l:run, l:tmp)
 			else
-				let l:tmp = fnamemodify(tempname(), ':h') . '\vimmake.cmd'
-				let l:run = ['@echo off', l:cmd, 'pause']
-				if v:version >= 700
-					call writefile(l:run, l:tmp)
-				else
-					exe 'redir! > '. fnameescape(l:tmp)
-					silent echo "@echo off"
-					silent echo l:cmd
-					silent echo "pause"
-					redir END
-				endif
-				let l:ccc = shellescape(l:tmp)
-				silent exec '!start cmd /c '. l:ccc
+				exe 'redir! > '. fnameescape(l:tmp)
+				silent echo "@echo off"
+				silent echo l:cmd
+				silent echo "pause"
+				redir END
 			endif
+			let l:ccc = shellescape(l:tmp)
+			silent exec '!start cmd /c '. l:ccc
 		else
 			exec '!' . l:cmd
 		endif
@@ -407,6 +403,8 @@ function! Vimmake_Command(command, target, mode)
 			echom "ERROR: g:vimmake_runner is empty"
 			echohl NONE
 		endif
+	elseif (a:mode == 8)
+		exec '!' . l:cmd
 	endif
 	return l:text
 endfunc
@@ -1070,8 +1068,10 @@ function! s:Cmd_VimMake(bang, mods, args)
 		call Vimmake_Command(l:command, '', 1)
 	elseif l:mode <= 2
 		call Vimmake_Command(l:command, '', 0)
-	else
+	elseif l:mode <= 3
 		call Vimmake_Command(l:command, '', 3)
+	elseif l:mode <= 4
+		call Vimmake_Command(l:command, '', 8)
 	endif
 endfunc
 
