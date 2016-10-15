@@ -1011,12 +1011,6 @@ function! s:Cmd_VimMake(bang, mods, args)
 
 	let l:save_scroll = g:vimmake_build_scroll
 
-	if a:bang == '!'
-		let s:vimmake_build_scroll = 0
-	else
-		let s:vimmake_build_scroll = 1
-	endif
-
 	" check mode
 	let l:mode = g:vimmake_build_mode
 
