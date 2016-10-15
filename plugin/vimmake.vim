@@ -577,7 +577,7 @@ function! s:Vimmake_Build_OnFinish(what)
 		call setqflist([{'text':l:text}], 'a')
 		let g:vimmake_build_status = "success"
 	else
-		let l:text = 'with code '.s:async_code
+		let l:text = 'with code '.s:build_code
 		let l:text = "[Finished in ".l:last." seconds ".l:text."]"
 		call setqflist([{'text':l:text}], 'a')
 		let g:vimmake_build_status = "failure"
