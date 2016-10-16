@@ -132,7 +132,7 @@ endif
 
 " trim empty lines ?
 if !exists('g:vimmake_build_trim')
-	let g:vimmake_build_trim = 1
+	let g:vimmake_build_trim = 0
 endif
 
 " shell executable
