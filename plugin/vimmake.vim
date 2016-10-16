@@ -130,6 +130,21 @@ if !exists('g:vimmake_build_encoding')
 	let g:vimmake_build_encoding = ''
 endif
 
+" trim empty lines ?
+if !exists('g:vimmake_build_trim')
+	let g:vimmake_build_trim = 1
+endif
+
+" shell executable
+if !exists('g:vimmake_build_shell')
+	let g:vimmake_build_shell = &shell
+endif
+
+" shell flags
+if !exists('g:vimmake_build_shellcmdflag')
+	let g:vimmake_build_shellcmdflag = &shellcmdflag
+endif
+
 " external runner
 if !exists('g:vimmake_runner')
 	let g:vimmake_runner = ''
@@ -159,8 +174,11 @@ let s:vimmake_windows = 0	" internal usage, won't be modified by user
 let g:vimmake_windows = 0	" external reference, may be modified by user
 
 " check has advanced mode
-if v:version >= 800 || has('patch-7.4.1829')
+if v:version >= 800 || has('patch-7.4.1829') || has('nvim')
 	if has('job') && has('channel') && has('timers') && has('reltime') 
+		let s:vimmake_advance = 1
+		let g:vimmake_advance = 1
+	elseif has('nvim')
 		let s:vimmake_advance = 1
 		let g:vimmake_advance = 1
 	endif
@@ -421,9 +439,10 @@ let s:build_state = 0
 let s:build_start = 0.0
 let s:build_debug = 0
 let s:build_quick = 0
+let s:build_neovim = has('nvim')? 1 : 0
 
 " check :cbottom available
-if has('patch-7.4.1997')
+if has('patch-7.4.1997') && (!has('nvim'))
 	let s:build_quick = 1
 endif
 
@@ -437,6 +456,9 @@ endfunc
 " check last line
 function! s:Vimmake_Build_Cursor()
 	if &buftype == 'quickfix'
+		if s:build_neovim != 0
+			let w:vimmake_build_qfview = winsaveview()
+		endif
 		if line('.') != line('$')
 			let s:build_last = 0
 		endif
@@ -454,10 +476,34 @@ function! s:Vimmake_Build_AutoScroll()
 	endif
 endfunc
 
+" restore view in neovim
+function! s:Vimmake_Build_NeoReset()
+	if &buftype == 'quickfix'
+		if exists('w:vimmake_build_qfview')
+			call winrestview(w:vimmake_build_qfview)
+			unlet w:vimmake_build_qfview
+		endif
+	endif
+endfunc
+
+" neoview will reset cursor when caddexpr is invoked
+function! s:Vimmake_Build_NeoRestore()
+	if &buftype == 'quickfix'
+		call s:Vimmake_Build_NeoReset()
+	else
+		let l:winnr = winnr()
+		windo call s:Vimmake_Build_NeoReset()
+		silent exec ''.l:winnr.'wincmd w'
+	endif
+endfunc
+
 " check if quickfix window can scroll now
 function! s:Vimmake_Build_CheckScroll()
 	if g:vimmake_build_last == 0
 		if &buftype == 'quickfix'
+			if s:build_neovim != 0
+				let w:vimmake_build_qfview = winsaveview()
+			endif
 			return (line('.') == line('$'))
 		else
 			return 1
@@ -472,6 +518,9 @@ function! s:Vimmake_Build_CheckScroll()
 		return 1
 	else
 		if &buftype == 'quickfix'
+			if s:build_neovim != 0
+				let w:vimmake_build_qfview = winsaveview()
+			endif
 			return (line('.') == line('$'))
 		else
 			return (!pumvisible())
@@ -485,20 +534,24 @@ function! s:Vimmake_Build_Update(count)
 	let l:count = 0
 	let l:total = 0
 	let l:check = s:Vimmake_Build_CheckScroll()
-	if g:vimmake_build_encoding == &encoding | let l:iconv = 0 | endif
+	if g:vimmake_build_encoding == &encoding
+		let l:iconv = 0 
+	endif
 	while s:build_tail < s:build_head
 		let l:text = s:build_output[s:build_tail]
-		if l:text != '' 
-			if l:iconv != 0
-				try
-					let l:text = iconv(l:text, 
-						\ g:vimmake_build_encoding, &encoding)
-				catch /.*/
-				endtry
-			endif
-			caddexpr l:text
-			let l:total += 1
+		if l:iconv != 0
+			try
+				let l:text = iconv(l:text, 
+					\ g:vimmake_build_encoding, &encoding)
+			catch /.*/
+			endtry
 		endif
+		if l:text != ''
+			caddexpr l:text
+		elseif g:vimmake_build_trim == 0
+			caddexpr "\n"
+		endif
+		let l:total += 1
 		unlet s:build_output[s:build_tail]
 		let s:build_tail += 1
 		let l:count += 1
@@ -509,10 +562,14 @@ function! s:Vimmake_Build_Update(count)
 	if l:check != 0
 		if and(g:vimmake_build_scroll, 1) != 0 && l:total > 0
 			call s:Vimmake_Build_AutoScroll()
+		elseif s:build_neovim != 0
+			call s:Vimmake_Build_NeoRestore()
 		endif
 		if and(g:vimmake_build_scroll, 8) != 0
 			silent clast
 		endif
+	elseif s:build_neovim != 0
+		call s:Vimmake_Build_NeoRestore()
 	endif
 	if g:vimmake_build_update != ''
 		exec g:vimmake_build_update
@@ -536,9 +593,6 @@ function! g:Vimmake_Build_OnCallback(channel, text)
 	if type(a:text) != 1
 		return
 	endif
-	if a:text == ''
-		return
-	endif
 	let s:build_output[s:build_head] = a:text
 	let s:build_head += 1
 	if g:vimmake_build_timer <= 0
@@ -555,8 +609,10 @@ function! s:Vimmake_Build_OnFinish(what)
 	endif
 	if a:what == 0
 		let s:build_state = or(s:build_state, 2)
-	else
+	elseif a:what == 1
 		let s:build_state = or(s:build_state, 4)
+	else
+		let s:build_state = 7
 	endif
 	if and(s:build_state, 7) != 7
 		return -2
@@ -586,6 +642,8 @@ function! s:Vimmake_Build_OnFinish(what)
 	if l:check != 0
 		if and(g:vimmake_build_scroll, 1) != 0
 			call s:Vimmake_Build_AutoScroll()
+		elseif s:build_neovim != 0
+			call s:Vimmake_Build_NeoRestore()
 		endif
 		if and(g:vimmake_build_scroll, 4) != 0
 			silent clast
@@ -629,6 +687,22 @@ function! g:Vimmake_Build_OnExit(job, message)
 	call s:Vimmake_Build_OnFinish(0)
 endfunc
 
+" invoked on neovim when stderr/stdout/exit
+function! g:Vimmake_Build_NeoVim(job_id, data, event)
+	if a:event == 'stdout' || a:event == 'stderr'
+		let l:index = 0
+		let l:size = len(a:data)
+		while l:index < l:size
+			let s:build_output[s:build_head] = a:data[l:index]
+			let s:build_head += 1
+			let l:index += 1
+		endwhile
+		call s:Vimmake_Build_Update(-1)
+	elseif a:event == 'exit'
+		call s:Vimmake_Build_OnFinish(2)
+	endif
+endfunc
+
 " start background build
 function! g:Vimmake_Build_Start(cmd)
 	let l:running = 0
@@ -638,8 +712,14 @@ function! g:Vimmake_Build_Start(cmd)
 		return -1
 	endif
 	if exists('s:build_job')
-		if job_status(s:build_job) == 'run'
-			let l:running = 1
+		if s:build_neovim == 0
+			if job_status(s:build_job) == 'run'
+				let l:running = 1
+			endif
+		else
+			if s:build_job > 0
+				let l:running = 1
+			endif
 		endif
 	endif
 	if type(a:cmd) == 1
@@ -650,39 +730,44 @@ function! g:Vimmake_Build_Start(cmd)
 	if s:build_state != 0 || l:running != 0
 		call s:ErrorMsg("background job is still running")
 		return -2
-	elseif l:empty == 0
-		let l:args = [&shell, &shellcmdflag]
-		let l:name = []
-		if type(a:cmd) == 1
-			let l:name = a:cmd
-			if s:vimmake_windows == 0
-				let l:args += [a:cmd]
-			else
-				let l:tmp = fnamemodify(tempname(), ':h') . '\vimmake.cmd'
-				let l:run = ['@echo off', a:cmd]
-				call writefile(l:run, l:tmp)
-				let l:args += [shellescape(l:tmp)]
-			endif
-		elseif type(a:cmd) == 3
-			if s:vimmake_windows == 0
-				let l:temp = []
-				for l:item in a:cmd
-					if index(['|', '`'], l:item) < 0
-						let l:temp += [fnameescape(l:item)]
-					else
-						let l:temp += ['|']
-					endif
-				endfor
-				let l:args += [join(l:temp, ' ')]
-			else
-				let l:args += a:cmd
-			endif
-			let l:vector = []
-			for l:x in a:cmd
-				let l:vector += ['"'.l:x.'"']
-			endfor
-			let l:name = join(l:vector, ', ')
+	endif
+	if l:empty != 0
+		echo "empty cmd"
+		return -3
+	endif
+	let l:args = [g:vimmake_build_shell, g:vimmake_build_shellcmdflag]
+	let l:name = []
+	if type(a:cmd) == 1
+		let l:name = a:cmd
+		if s:vimmake_windows == 0
+			let l:args += [a:cmd]
+		else
+			let l:tmp = fnamemodify(tempname(), ':h') . '\vimmake.cmd'
+			let l:run = ['@echo off', a:cmd]
+			call writefile(l:run, l:tmp)
+			let l:args += [shellescape(l:tmp)]
 		endif
+	elseif type(a:cmd) == 3
+		if s:vimmake_windows == 0
+			let l:temp = []
+			for l:item in a:cmd
+				if index(['|', '`'], l:item) < 0
+					let l:temp += [fnameescape(l:item)]
+				else
+					let l:temp += ['|']
+				endif
+			endfor
+			let l:args += [join(l:temp, ' ')]
+		else
+			let l:args += a:cmd
+		endif
+		let l:vector = []
+		for l:x in a:cmd
+			let l:vector += ['"'.l:x.'"']
+		endfor
+		let l:name = join(l:vector, ', ')
+	endif
+	if s:build_neovim == 0
 		let l:options = {}
 		let l:options['callback'] = 'g:Vimmake_Build_OnCallback'
 		let l:options['close_cb'] = 'g:Vimmake_Build_OnClose'
@@ -696,30 +781,43 @@ function! g:Vimmake_Build_Start(cmd)
 			let l:options['stoponexit'] = g:vimmake_build_stop
 		endif
 		let s:build_job = job_start(l:args, l:options)
-		if job_status(s:build_job) != 'fail'
-			let s:build_output = {}
-			let s:build_head = 0
-			let s:build_tail = 0
-			let l:arguments = "[".l:name."]"
-			let l:title = ':VimMake '.l:name
-			call setqflist([], ' ', {'title':l:title})
-			call setqflist([{'text':l:arguments}], 'a')
-			let s:build_start = float2nr(reltimefloat(reltime()))
-			if g:vimmake_build_timer > 0
-				let l:options = {'repeat':-1}
-				let l:name = 'g:Vimmake_Build_OnTimer'
-				let s:build_timer = timer_start(100, l:name, l:options)
-			endif
-			let s:build_state = 1
-			let g:vimmake_build_status = "running"
-			redrawstatus!
-		else
-			unlet s:build_job
-			call s:ErrorMsg("Background job start failed '".a:cmd."'")
-			return -3
-		endif
+		let l:success = (job_status(s:build_job) != 'fail')? 1 : 0
 	else
-		echo "empty cmd"
+		let l:callbacks = {'shell': 'VimMake'}
+		let l:callbacks['on_stdout'] = function('g:Vimmake_Build_NeoVim')
+		let l:callbacks['on_stderr'] = function('g:Vimmake_Build_NeoVim')
+		let l:callbacks['on_exit'] = function('g:Vimmake_Build_NeoVim')
+		let s:build_job = jobstart(l:args, l:callbacks)
+		let l:success = (s:build_job > 0)? 1 : 0
+	endif
+	if l:success != 0
+		let s:build_output = {}
+		let s:build_head = 0
+		let s:build_tail = 0
+		let l:arguments = "[".l:name."]"
+		let l:title = ':VimMake '.l:name
+		if s:build_neovim == 0
+			if has('patch-7.4.2210')
+				call setqflist([], ' ', {'title':l:title})
+			else
+				call setqflist([], ' ')
+			endif
+		else
+			call setqflist([], ' ', l:title)
+		endif
+		call setqflist([{'text':l:arguments}], 'a')
+		let s:build_start = float2nr(reltimefloat(reltime()))
+		if g:vimmake_build_timer > 0 && s:build_neovim == 0
+			let l:options = {'repeat':-1}
+			let l:name = 'g:Vimmake_Build_OnTimer'
+			let s:build_timer = timer_start(100, l:name, l:options)
+		endif
+		let s:build_state = 1
+		let g:vimmake_build_status = "running"
+		redrawstatus!
+	else
+		unlet s:build_job
+		call s:ErrorMsg("Background job start failed '".a:cmd."'")
 		return -4
 	endif
 	return 0
@@ -734,10 +832,16 @@ function! g:Vimmake_Build_Stop(how)
 	endif
 	if l:how == '' | let l:how = 'term' | endif
 	if exists('s:build_job')
-		if job_status(s:build_job) == 'run'
-			call job_stop(s:build_job, l:how)
+		if s:build_neovim == 0
+			if job_status(s:build_job) == 'run'
+				call job_stop(s:build_job, l:how)
+			else
+				return -2
+			endif
 		else
-			return -2
+			if s:build_job > 0
+				call jobstop(s:build_job)
+			endif
 		endif
 	else
 		return -3
@@ -748,7 +852,11 @@ endfunc
 " get job status
 function! g:Vimmake_Build_Status()
 	if exists('s:build_job')
-		return job_status(s:build_job)
+		if s:build_neovim == 0
+			return job_status(s:build_job)
+		else
+			return 'run'
+		endif
 	else
 		return 'none'
 	endif
@@ -800,7 +908,6 @@ function! s:ExtractOpt(command)
 	let opts.save = get(opts, 'save', '')
 	let opts.program = get(opts, 'program', '')
 	if 0
-		messages clear
 		echom 'cwd:'. opts.cwd
 		echom 'mode:'. opts.mode
 		echom 'save:'. opts.save
