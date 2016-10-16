@@ -648,6 +648,8 @@ function! s:Vimmake_Build_OnFinish(what)
 		if and(g:vimmake_build_scroll, 4) != 0
 			silent clast
 		endif
+	else
+		call s:Vimmake_Build_NeoRestore()
 	endif
 	if g:vimmake_build_bell != 0
 		exec 'norm! \<esc>'
