@@ -135,16 +135,6 @@ if !exists('g:vimmake_build_trim')
 	let g:vimmake_build_trim = 0
 endif
 
-" shell executable
-if !exists('g:vimmake_build_shell')
-	let g:vimmake_build_shell = &shell
-endif
-
-" shell flags
-if !exists('g:vimmake_build_shellcmdflag')
-	let g:vimmake_build_shellcmdflag = &shellcmdflag
-endif
-
 " external runner
 if !exists('g:vimmake_runner')
 	let g:vimmake_runner = ''
@@ -737,7 +727,12 @@ function! g:Vimmake_Build_Start(cmd)
 		echo "empty cmd"
 		return -3
 	endif
-	let l:args = [g:vimmake_build_shell, g:vimmake_build_shellcmdflag]
+	if !filereadable(&shell)
+		let l:text = "invalid config in &shell and &shellcmdflag"
+		call s:ErrorMsg(l:text . ", &shell must be an executable.")
+		return -4
+	endif
+	let l:args = [&shell, &shellcmdflag]
 	let l:name = []
 	if type(a:cmd) == 1
 		let l:name = a:cmd
@@ -820,7 +815,7 @@ function! g:Vimmake_Build_Start(cmd)
 	else
 		unlet s:build_job
 		call s:ErrorMsg("Background job start failed '".a:cmd."'")
-		return -4
+		return -5
 	endif
 	return 0
 endfunc
