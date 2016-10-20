@@ -558,6 +558,7 @@ function! s:Vimmake_Build_Start(cmd)
 		let l:options['exit_cb'] = function('s:Vimmake_Build_OnExit')
 		let l:options['out_io'] = 'pipe'
 		let l:options['err_io'] = 'out'
+		let l:options['in_io'] = 'null'
 		let l:options['out_mode'] = 'nl'
 		let l:options['err_mode'] = 'nl'
 		let l:options['stoponexit'] = 'term'
