@@ -439,14 +439,15 @@ endfunc
 function! s:Vimmake_Build_OnClose(channel)
 	" caddexpr "[close]"
 	let s:build_debug = 1
-	let l:limit = 512
+	let l:limit = 128
 	while ch_status(a:channel) == 'buffered'
 		let l:text = ch_read(a:channel)
 		if l:text == '' " important when child process is killed
 			let l:limit -= 1
 			if l:limit < 0 | break | endif
+		else
+			call s:Vimmake_Build_OnCallback(a:channel, l:text)
 		endif
-		call g:Vimmake_Build_OnCallback(a:channel, l:text)
 	endwhile
 	let s:build_debug = 0
 	call s:Vimmake_Build_Update(-1)
@@ -675,11 +676,7 @@ function! s:ExtractOpt(command)
 		else
 			let val = (opt == 'cwd')? '' : 1
 		endif
-		if opt == 'cwd'
-			let opts.cwd = fnamemodify(expand(val), ':p:s?[^:]\zs[\\/]$??')
-		else
-			let opts[opt] = substitute(val, '\\\(\s\)', '\1', 'g')
-		endif
+		let opts[opt] = substitute(val, '\\\(\s\)', '\1', 'g')
 		let cmd = substitute(cmd, '^-\w\+\%(=\%(\\.\|\S\)*\)\=\s*', '', '')
 	endwhile
 	let cmd = substitute(cmd, '^\s*\(.\{-}\)\s*$', '\1', '')
