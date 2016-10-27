@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com
-" Last change: 2016.7.7
+" Last change: 2016.10.28
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -120,6 +120,11 @@ if !exists('g:vimmake_build_trim')
 	let g:vimmake_build_trim = 0
 endif
 
+" use local errorformat
+if !exists('g:vimmake_build_local')
+	let g:vimmake_build_local = 0
+endif
+
 " build info
 if !exists('g:vimmake_text')
 	let g:vimmake_text = ''
@@ -219,6 +224,7 @@ let s:build_debug = 0
 let s:build_quick = 0
 let s:build_hold = 0
 let s:build_scroll = 0
+let s:build_efm = &errorformat
 
 " check :cbottom available, cursor in quick need to hold ?
 if s:build_nvim == 0
@@ -318,9 +324,16 @@ function! s:Vimmake_Build_Update(count)
 	let l:total = 0
 	let l:empty = [{'text':''}]
 	let l:check = s:Vimmake_Build_CheckScroll()
+	let l:efm1 = &g:efm
+	let l:efm2 = &l:efm
 	if g:vimmake_build_encoding == &encoding
 		let l:iconv = 0 
 	endif
+	if &g:efm != s:build_efm && g:vimmake_build_local != 0
+		let &l:efm = s:build_efm
+		let &g:efm = s:build_efm
+	endif
+	let l:raw = (s:build_efm == '')? 1 : 0
 	while s:build_tail < s:build_head
 		let l:text = s:build_output[s:build_tail]
 		if l:iconv != 0
@@ -331,7 +344,11 @@ function! s:Vimmake_Build_Update(count)
 			endtry
 		endif
 		if l:text != ''
-			caddexpr l:text
+			if l:raw == 0
+				caddexpr l:text
+			else
+				call setqflist([{'text':l:text}], 'a')
+			endif
 		elseif g:vimmake_build_trim == 0
 			call setqflist(l:empty, 'a')
 		endif
@@ -343,6 +360,10 @@ function! s:Vimmake_Build_Update(count)
 			break
 		endif
 	endwhile
+	if g:vimmake_build_local != 0
+		if l:efm1 != &g:efm | let &g:efm = l:efm1 | endif
+		if l:efm2 != &l:efm | let &l:efm = l:efm2 | endif
+	endif
 	if s:build_scroll != 0 && l:total > 0 && l:check != 0
 		call s:Vimmake_Build_AutoScroll()
 	elseif s:build_hold != 0
@@ -552,6 +573,7 @@ function! s:Vimmake_Build_Start(cmd)
 		endfor
 		let l:name = join(l:vector, ', ')
 	endif
+	let s:build_efm = &errorformat
 	if s:build_nvim == 0
 		let l:options = {}
 		let l:options['callback'] = function('s:Vimmake_Build_OnCallback')
@@ -729,7 +751,7 @@ endfunc
 "----------------------------------------------------------------------
 " run commands
 "----------------------------------------------------------------------
-function! vimmake#run(bang, mods, args)
+function! vimmake#run(bang, opts, args)
 	let l:macros = {}
 	let l:macros['VIM_FILEPATH'] = expand("%:p")
 	let l:macros['VIM_FILENAME'] = expand("%:t")
@@ -764,6 +786,13 @@ function! vimmake#run(bang, mods, args)
 		let l:opts.cwd = s:StringReplace(l:opts.cwd, l:replace, l:val)
 		let l:opts.text = s:StringReplace(l:opts.text, l:replace, l:val)
 	endfor
+
+	" combine options
+	if type(a:opts) == type({})
+		for [l:key, l:val] in items(a:opts)
+			let l:opts[l:key] = l:val
+		endfor
+	endif
 
 	" check if need to save
 	if get(l:opts, 'save', '')
@@ -1178,33 +1207,127 @@ command! -bang -nargs=* VimBuild call s:Cmd_VimBuild('<bang>', <f-args>)
 
 
 
-"----------------------------------------------------------------------
-" grep code
-"----------------------------------------------------------------------
-let g:vimmake_grepinc = ['c', 'cpp', 'cc', 'h', 'hpp', 'hh']
-let g:vimmake_grepinc += ['m', 'mm', 'py', 'js', 'php', 'java', 'vim']
 
-function! s:Cmd_GrepCode(text)
-	let l:grep = &grepprg
-	if strpart(l:grep, 0, 8) == 'findstr '
-		let l:inc = ''
-		for l:item in g:vimmake_grepinc
-			let l:inc .= '*.'.l:item.' '
-		endfor
-		exec 'grep! /s /C:"'. a:text . '" '. l:inc
-		"exec 'VimMake -program=grep @ /s /C:"'. a:text . '" '. l:inc
-	else
-		let l:inc = ''
-		for l:item in g:vimmake_grepinc
-			let l:inc .= " --include \\*." . l:item
-		endfor
-		exec 'grep! -R ' . shellescape(a:text) . l:inc. ' *'
-		"exec 'VimMake -program=grep -R ' . shellescape(a:text) . l:inc. ' *'
-	endif
+"----------------------------------------------------------------------
+" get full filename
+"----------------------------------------------------------------------
+function! vimmake#fullname(f)
+  let f = a:f
+  if f =~ "'."
+	  try
+		  redir => m
+		  silent exe ':marks' f[1]
+		  redir END
+		  let f = split(split(m, '\n')[-1])[-1]
+		  let f = filereadable(f)? f : ''
+	  catch
+		  let f = ''
+	  endtry
+  endif
+  let f = len(f) ? f : expand('%')
+  return fnamemodify(f, ':p')
 endfunc
 
 
-command! -nargs=1 GrepCode call s:Cmd_GrepCode(<f-args>)
+"----------------------------------------------------------------------
+" guess root
+"----------------------------------------------------------------------
+if !exists('g:vimmake_rootmarks')
+    let g:vimmake_rootmarks = ['.projectroot', '.git', '.hg', '.svn', '.bzr']
+    let g:vimmake_rootmarks += ['_darcs', 'build.xml']
+endif
+
+function! vimmake#get_root(...)
+    function! s:guess_root(filename)
+        let fullfile = vimmake#fullname(a:filename)
+        if exists('b:vimmake_root')
+            let l:vimmake_root = fnamemodify(b:vimmake_root, ':p')
+            if stridx(fullfile, l:vimmake_root) == 0
+                return b:vimmake_root
+            endif
+        endif
+        if fullfile =~ '^fugitive:/'
+            if exists('b:git_dir')
+                return fnamemodify(b:git_dir, ':h')
+            endif
+            return '' " skip any fugitive buffers early
+        endif
+        for marker in g:vimmake_rootmarks
+            let pivot=fullfile
+            while 1
+                let prev = pivot
+                let pivot = fnamemodify(pivot, ':h')
+                if filereadable(pivot.'/'.marker)
+                    return pivot
+                elseif isdirectory(pivot.'/'.marker)
+                    return pivot
+                endif
+                if pivot == prev
+                    break
+                endif
+            endwhile
+        endfor
+        return ''
+    endfunc
+	let root = s:guess_root(a:0 ? a:1 : '')
+	if len(root)
+		return root
+	endif
+	" Not found: return parent directory of current file / file itself.
+	let fullfile = vimmake#fullname(a:0 ? a:1 : '')
+	return !isdirectory(fullfile) ? fnamemodify(fullfile, ':h') : fullfile
+endfunc
+
+
+"----------------------------------------------------------------------
+" grep code
+"----------------------------------------------------------------------
+if !exists('g:vimmake_grep')
+	let g:vimmake_grep = ['c', 'cpp', 'cc', 'h', 'hpp', 'hh', 'as']
+	let g:vimmake_grep += ['m', 'mm', 'py', 'js', 'php', 'java', 'vim']
+	let g:vimmake_grep += ['asm', 's', 'pyw', 'lua', 'go']
+endif
+
+function! vimmake#grep(text, cwd)
+	let l:grep = &grepprg
+	if strpart(l:grep, 0, 8) == 'findstr '
+		let l:inc = ''
+		for l:item in g:vimmake_grep
+            if a:cwd == '.' || a:cwd == ''
+                let l:inc .= '*.'.l:item.' '
+            else
+                let l:full = vimmake#fullname(a:cwd)
+                let l:inc .= '"'.l:full . '*.'.l:item.'" '
+            endif
+		endfor
+		exec 'VimMake -program=grep @ /s /C:"'. a:text . '" '. l:inc
+	else
+		let l:inc = ''
+		for l:item in g:vimmake_grep
+			let l:inc .= " --include \\*." . l:item
+		endfor
+        if a:cwd == '.' || a:cwd == ''
+            let l:inc .= ' *'
+        else
+            let l:full = vimmake#fullname(a:cwd)
+            let l:inc .= ' '.shellescape(l:full)
+        endif
+		exec 'VimMake -program=grep @ -R ' .shellescape(a:text). l:inc
+	endif
+endfunc
+
+function! s:Cmd_GrepCode(bang, what, ...)
+    let l:cwd = (a:0 == 0)? '' : a:1
+    if a:bang != ''
+        let l:cwd = vimmake#get_root(l:cwd)
+    endif
+    if l:cwd != ''
+        let l:cwd = vimmake#fullname(l:cwd)
+    endif
+    call vimmake#grep(a:what, l:cwd)
+endfunc
+
+command! -bang -nargs=+ GrepCode call s:Cmd_GrepCode('<bang>', <f-args>)
 
 
 
@@ -1237,7 +1360,7 @@ function! s:Cmd_VimScope(what, name)
 		exec 'cs find '.a:what.' '.fnameescape(a:name)
 	catch /^Vim\%((\a\+)\)\=:E259/
 		echohl ErrorMsg
-		echo "E259: not find "'.a:name.'"'
+		echo "E259: not find '".a:name."'"
 		echohl NONE
 	catch /^Vim\%((\a\+)\)\=:E567/
 		echohl ErrorMsg
@@ -1256,19 +1379,19 @@ command! -nargs=* VimScope call s:Cmd_VimScope(<f-args>)
 "----------------------------------------------------------------------
 " Keymap Setup
 "----------------------------------------------------------------------
-function! s:Cmd_MakeKeymap()
+function! vimmake#keymap()
 	noremap <silent><F5> :VimExecute run<cr>
 	noremap <silent><F6> :VimExecute filename<cr>
 	noremap <silent><F7> :VimBuild emake<cr>
 	noremap <silent><F8> :VimExecute emake<cr>
 	noremap <silent><F9> :VimBuild gcc<cr>
-	noremap <silent><F10> :call vimmake#Toggle_Quickfix(6)<cr>
+	noremap <silent><F10> :call vimmake#toggle_quickfix(6)<cr>
 	inoremap <silent><F5> <ESC>:VimExecute run<cr>
 	inoremap <silent><F6> <ESC>:VimExecute filename<cr>
 	inoremap <silent><F7> <ESC>:VimBuild emake<cr>
 	inoremap <silent><F8> <ESC>:VimExecute emake<cr>
 	inoremap <silent><F9> <ESC>:VimBuild gcc<cr>
-	inoremap <silent><F10> <ESC>:call vimmake#Toggle_Quickfix(6)<cr>
+	inoremap <silent><F10> <ESC>:call vimmake#toggle_quickfix(6)<cr>
 
 	noremap <silent><F11> :cp<cr>
 	noremap <silent><F12> :cn<cr>
@@ -1282,6 +1405,7 @@ function! s:Cmd_MakeKeymap()
 	
 	" set keymap to GrepCode 
 	noremap <silent><leader>cr :GrepCode <C-R>=expand("<cword>")<cr><cr>
+	noremap <silent><leader>cv :GrepCode! <C-R>=expand("<cword>")<cr><cr>
 
 	" set keymap to cscope
 	if has("cscope")
@@ -1305,20 +1429,18 @@ function! s:Cmd_MakeKeymap()
 	endif
 	
 	" cscope update
-	noremap <leader>cb :call vimmake#Update_Tags('.tags', '')<cr>
-	noremap <leader>cm :call vimmake#Update_Tags('', '.cscope')<cr>
+	noremap <leader>cb :call vimmake#update_tags('', '.tags', '')<cr>
+	noremap <leader>cm :call vimmake#update_tags('', '', '.cscope')<cr>
+	noremap <leader>ck :call vimmake#update_tags('!', '.tags', '')<cr>
+	noremap <leader>cx :call vimmake#update_tags('!', '', '.cscope')<cr>
 endfunc
 
-command! -nargs=0 MakeKeymap call s:Cmd_MakeKeymap()
+command! -nargs=0 VimmakeKeymap call vimmake#keymap()
 
-function! vimmake#MakeKeymap()
-	MakeKeymap
+function! vimmake#load()
 endfunc
 
-function! vimmake#Load()
-endfunc
-
-function! vimmake#Toggle_Quickfix(size, ...)
+function! vimmake#toggle_quickfix(size, ...)
 	let l:mode = (a:0 == 0)? 2 : (a:1)
 	function! s:WindowCheck(mode)
 		if getbufvar('%', '&buftype') == 'quickfix'
@@ -1359,7 +1481,7 @@ function! vimmake#Toggle_Quickfix(size, ...)
 endfunc
 
 
-function! vimmake#Update_FileList(outname)
+function! vimmake#update_filelist(outname)
 	let l:names = ['*.c', '*.cpp', '*.cc', '*.cxx']
 	let l:names += ['*.h', '*.hpp', '*.hh', '*.py', '*.pyw', '*.java', '*.js']
 	if has('win32') || has("win64") || has("win16")
@@ -1380,20 +1502,39 @@ function! vimmake#Update_FileList(outname)
 	redraw!
 endfunc
 
-function! vimmake#Update_Tags(ctags, cscope)
-	echo "update tags"
+function! vimmake#update_tags(cwd, ctags, cscope)
+    if a:cwd == '!'
+        let l:cwd = vimmake#get_root('')
+    else
+        let l:cwd = vimmake#fullname((a:cwd != '')? a:cwd : '.')
+        let l:cwd = fnamemodify(l:cwd, ':p:h')
+    endif
+    let l:cwd = substitute(l:cwd, '\\', '/', 'g')
 	if a:ctags != "" 
-		if filereadable(a:ctags) | call delete(a:ctags) | endif
+        let l:ctags = s:PathJoin(l:cwd, a:ctags)
+		if filereadable(l:ctags) | call delete(l:ctags) | endif
 		let l:parameters = ' --fields=+iaS --extra=+q --c++-kinds=+px '
-		exec '!ctags -R -f '.a:ctags. l:parameters . ' .'
+        let l:ctags = shellescape(l:ctags)
+        let l:options = {}
+        let l:options['cwd'] = l:cwd
+        let l:command = 'ctags -R -f '. shellescape(a:ctags) 
+        call vimmake#run('', l:options, l:command . l:parameters . ' .')
 	endif
 	if has("cscope") && a:cscope != ""
-		silent! exec "cs kill -1"
-		if filereadable(a:cscope) | call delete(a:cscope) | endif
-		exec '!cscope -b -R -f '.a:cscope
-		if filereadable(a:cscope)
-			exec 'cs add '.a:cscope
+		let l:fullname = s:PathJoin(l:cwd, a:cscope)
+        let l:fullname = vimmake#fullname(l:fullname)
+        let l:fullname = substitute(l:fullname, '\\', '/', 'g')
+		let l:cscope = fnameescape(l:fullname)
+		silent! exec "cs kill ".l:cscope
+        let l:command = 'cs add '.l:cscope.' '.fnameescape(l:cwd).' '
+		let l:options = {}
+        let l:options['post'] = 'silent! '.l:command
+        let l:options['cwd'] = l:cwd
+		if filereadable(l:fullname) 
+			try | call delete(l:fullname) | catch | endtry
 		endif
+        let l:fullname = shellescape(l:fullname)
+		call vimmake#run('', l:options, 'cscope -b -R -f '.l:fullname)
 	endif
 	redraw!
 endfunc
