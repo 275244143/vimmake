@@ -1404,8 +1404,8 @@ function! vimmake#keymap()
 	noremap <silent><leader>cl :cclose<cr>
 	
 	" set keymap to GrepCode 
-	noremap <silent><leader>cr :GrepCode <C-R>=expand("<cword>")<cr><cr>
-	noremap <silent><leader>cv :GrepCode! <C-R>=expand("<cword>")<cr><cr>
+	noremap <silent><leader>cv :GrepCode <C-R>=expand("<cword>")<cr><cr>
+	noremap <silent><leader>cx :GrepCode! <C-R>=expand("<cword>")<cr><cr>
 
 	" set keymap to cscope
 	if has("cscope")
@@ -1429,10 +1429,10 @@ function! vimmake#keymap()
 	endif
 	
 	" cscope update
-	noremap <leader>cb :call vimmake#update_tags('', '.tags', '')<cr>
-	noremap <leader>cm :call vimmake#update_tags('', '', '.cscope')<cr>
-	noremap <leader>ck :call vimmake#update_tags('!', '.tags', '')<cr>
-	noremap <leader>cx :call vimmake#update_tags('!', '', '.cscope')<cr>
+	noremap <leader>c1 :call vimmake#update_tags('', '.tags', '')<cr>
+	noremap <leader>c2 :call vimmake#update_tags('', '', '.cscope')<cr>
+	noremap <leader>c3 :call vimmake#update_tags('!', '.tags', '')<cr>
+	noremap <leader>c4 :call vimmake#update_tags('!', '', '.cscope')<cr>
 endfunc
 
 command! -nargs=0 VimmakeKeymap call vimmake#keymap()
