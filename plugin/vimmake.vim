@@ -1252,21 +1252,22 @@ function! vimmake#get_root(...)
             endif
             return '' " skip any fugitive buffers early
         endif
-        for marker in g:vimmake_rootmarks
-            let pivot=fullfile
-            while 1
-                let prev = pivot
-                let pivot = fnamemodify(pivot, ':h')
-                if filereadable(pivot.'/'.marker)
-                    return pivot
-                elseif isdirectory(pivot.'/'.marker)
-                    return pivot
-                endif
-                if pivot == prev
-                    break
-                endif
-            endwhile
-        endfor
+		let pivot=fullfile
+		while 1
+			let prev = pivot
+			let pivot = fnamemodify(pivot, ':h')
+			for marker in g:vimmake_rootmarks
+				let newname = s:PathJoin(pivot, marker)
+				if filereadable(newname)
+					return pivot
+				elseif isdirectory(newname)
+					return pivot
+				endif
+			endfor
+			if pivot == prev
+				break
+			endif
+		endwhile
         return ''
     endfunc
 	let root = s:guess_root(a:0 ? a:1 : '')
