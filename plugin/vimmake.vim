@@ -1404,10 +1404,23 @@ function! vimmake#keymap()
 	noremap <silent><leader>co :copen 6<cr>
 	noremap <silent><leader>cl :cclose<cr>
 	
+	" VimTool startup
+	for l:index in range(10)
+		exec 'noremap <leader>c'.l:index.' :VimTool ' . l:index . '<cr>'
+		if has('gui_running')
+			let l:button = 'F'.l:index
+			if l:index == 0 | let l:button = 'F10' | endif
+			exec 'noremap <S-'.l:button.'> :VimTool '. l:index .'<cr>'
+			exec 'inoremap <S-'.l:button.'> <ESC>:VimTool '. l:index .'<cr>'
+		endif
+	endfor
+	
 	" set keymap to GrepCode 
+	noremap <silent><leader>cq :VimStop<cr>
+	noremap <silent><leader>cQ :VimStop!<cr>
 	noremap <silent><leader>cv :GrepCode <C-R>=expand("<cword>")<cr><cr>
 	noremap <silent><leader>cx :GrepCode! <C-R>=expand("<cword>")<cr><cr>
-
+	
 	" set keymap to cscope
 	if has("cscope")
 		noremap <leader>cs :VimScope s <C-R>=expand("<cword>")<CR><CR>
@@ -1430,10 +1443,12 @@ function! vimmake#keymap()
 	endif
 	
 	" cscope update
-	noremap <leader>c1 :call vimmake#update_tags('', '.tags', '')<cr>
-	noremap <leader>c2 :call vimmake#update_tags('', '', '.cscope')<cr>
-	noremap <leader>c3 :call vimmake#update_tags('!', '.tags', '')<cr>
-	noremap <leader>c4 :call vimmake#update_tags('!', '', '.cscope')<cr>
+	noremap <leader>cz1 :call vimmake#update_tags('', 'ctags', '.tags')<cr>
+	noremap <leader>cz2 :call vimmake#update_tags('', 'cscope', '.cscope')<cr>
+	noremap <leader>cz3 :call vimmake#update_tags('!', 'ctags', '.tags')<cr>
+	noremap <leader>cz4 :call vimmake#update_tags('!', 'cscope', '.cscope')<cr>
+	noremap <leader>cz5 :call vimmake#update_tags('', 'pycscope', '.cscopy')<cr>
+	noremap <leader>cz6 :call vimmake#update_tags('!', 'pycscope', '.cscopy')<cr>
 endfunc
 
 command! -nargs=0 VimmakeKeymap call vimmake#keymap()
@@ -1503,7 +1518,7 @@ function! vimmake#update_filelist(outname)
 	redraw!
 endfunc
 
-function! vimmake#update_tags(cwd, ctags, cscope)
+function! vimmake#update_tags(cwd, mode, outname)
     if a:cwd == '!'
         let l:cwd = vimmake#get_root('')
     else
@@ -1511,33 +1526,38 @@ function! vimmake#update_tags(cwd, ctags, cscope)
         let l:cwd = fnamemodify(l:cwd, ':p:h')
     endif
     let l:cwd = substitute(l:cwd, '\\', '/', 'g')
-	if a:ctags != "" 
-        let l:ctags = s:PathJoin(l:cwd, a:ctags)
-		if filereadable(l:ctags) | call delete(l:ctags) | endif
+	if a:mode == 'ctags'
+        let l:ctags = s:PathJoin(l:cwd, a:outname)
+		if filereadable(l:ctags) 
+			try | call delete(l:ctags) | catch | endtry
+		endif
 		let l:parameters = ' --fields=+iaS --extra=+q --c++-kinds=+px '
-        let l:ctags = shellescape(l:ctags)
         let l:options = {}
         let l:options['cwd'] = l:cwd
-        let l:command = 'ctags -R -f '. shellescape(a:ctags) 
+        let l:command = 'ctags -R -f '. shellescape(l:ctags)
         call vimmake#run('', l:options, l:command . l:parameters . ' .')
 	endif
-	if has("cscope") && a:cscope != ""
-		let l:fullname = s:PathJoin(l:cwd, a:cscope)
-        let l:fullname = vimmake#fullname(l:fullname)
-        let l:fullname = substitute(l:fullname, '\\', '/', 'g')
+	if a:mode == 'cscope' || a:mode == 'pycscope'
+		let l:fullname = s:PathJoin(l:cwd, a:outname)
+		let l:fullname = vimmake#fullname(l:fullname)
+		let l:fullname = substitute(l:fullname, '\\', '/', 'g')
 		let l:cscope = fnameescape(l:fullname)
 		silent! exec "cs kill ".l:cscope
-        let l:command = 'cs add '.l:cscope.' '.fnameescape(l:cwd).' '
+		let l:command = "silent! cs add ".l:cscope.' '.fnameescape(l:cwd)." "
 		let l:options = {}
-        let l:options['post'] = 'silent! '.l:command
-        let l:options['cwd'] = l:cwd
+		let l:options['post'] = l:command
+		let l:options['cwd'] = l:cwd
 		if filereadable(l:fullname) 
 			try | call delete(l:fullname) | catch | endtry
 		endif
-        let l:fullname = shellescape(l:fullname)
-		call vimmake#run('', l:options, 'cscope -b -R -f '.l:fullname)
+		if a:mode == 'cscope'
+			let l:fullname = shellescape(l:fullname)
+			call vimmake#run('', l:options, 'cscope -b -R -f '.l:fullname)
+		elseif a:mode == 'pycscope'
+			let l:fullname = shellescape(l:fullname)
+			call vimmake#run('', l:options, 'pycscope -R -f '.l:fullname)
+		endif
 	endif
-	redraw!
 endfunc
 
 
