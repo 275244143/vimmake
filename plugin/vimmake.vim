@@ -1274,7 +1274,7 @@ endfunc
 " guess root, '' as current direct, '%' as current buffer
 "----------------------------------------------------------------------
 if !exists('g:vimmake_rootmarks')
-    let g:vimmake_rootmarks = ['.projectroot', '.git', '.hg', '.svn', '.bzr']
+    let g:vimmake_rootmarks = ['.project', '.git', '.hg', '.svn', '.bzr']
     let g:vimmake_rootmarks += ['_darcs', 'build.xml']
 endif
 
