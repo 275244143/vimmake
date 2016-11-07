@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com
-" Last change: 2016.11.2
+" Last change: 2016.11.8
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -83,6 +83,11 @@ endif
 " will be executed after async build finished
 if !exists('g:vimmake_build_post')
 	let g:vimmake_build_post = ''
+endif
+
+" build hook
+if !exists('g:vimmake_build_hook')
+	let g:vimmake_build_hook = ''
 endif
 
 " will be executed after output callback
@@ -871,6 +876,14 @@ function! vimmake#run(bang, opts, args)
 		return
 	endif
 
+	if l:mode >= 10
+		let l:opts.cmd = l:command
+		if g:vimmake_build_hook != ''
+			exec 'call '. g:vimmake_build_hook .'(l:opts)'
+		endif
+		return
+	endif
+
 	if l:opts.cwd != ''
 		let l:opts.savecwd = getcwd()
 		try
@@ -1027,19 +1040,29 @@ function! s:Cmd_VimTool(bang, ...)
 	else
 		let l:mode = l:value
 	endif
+	let l:pos = stridx(l:mode, '/')
+	let l:auto = ''
+	if l:pos >= 0
+		let l:size = len(l:mode)
+		let l:auto = strpart(l:mode, l:pos + 1)
+		let l:mode = strpart(l:mode, 0, l:pos)
+		if len(l:auto) > 0
+			let l:auto = '-auto='.escape(matchstr(l:auto, '\w*'), ' ')
+		endif
+	endif
 	let $VIM_TARGET = l:target
 	let $VIM_SCRIPT = g:vimmake_path
 	let l:fullname = shellescape(l:fullname)
 	if index(['', '0', 'normal', 'default'], l:mode) >= 0
-		exec 'VimMake -mode=4 @ '. l:fullname
+		exec 'VimMake -mode=4 '.l:auto.' @ '. l:fullname
 	elseif index(['1', 'quickfix', 'make', 'makeprg'], l:mode) >= 0
-		exec 'VimMake -mode=1 @ '. l:fullname
+		exec 'VimMake -mode=1 '.l:auto.' @ '. l:fullname
 	elseif index(['2', 'system', 'silent'], l:mode) >= 0
-		exec 'VimMake -mode=3 @ '. l:fullname
+		exec 'VimMake -mode=3 '.l:auto.' @ '. l:fullname
 	elseif index(['3', 'background', 'bg'], l:mode) >= 0
-		exec 'VimMake -mode=5 @ '. l:fullname
+		exec 'VimMake -mode=5 '.l:auto.' @ '. l:fullname
 	elseif index(['6', 'async', 'job', 'channel'], l:mode) >= 0
-		exec 'VimMake -mode=0 @ '. l:fullname
+		exec 'VimMake -mode=0 '.l:auto.' @ '. l:fullname
 	else
 		call s:ErrorMsg("invalid mode: ".l:mode)
 	endif
@@ -1281,7 +1304,6 @@ endfunc
 "----------------------------------------------------------------------
 if !exists('g:vimmake_rootmarks')
     let g:vimmake_rootmarks = ['.project', '.git', '.hg', '.svn', '.root']
-    let g:vimmake_rootmarks += ['_darcs', 'build.xml', '.bzr']
 endif
 
 function! vimmake#get_root(path)
