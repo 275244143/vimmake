@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com
-" Last change: 2016.11.8
+" Last change: 2016.11.13
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -77,7 +77,7 @@ endif
 
 " using timer to update quickfix
 if !exists('g:vimmake_build_timer')
-	let g:vimmake_build_timer = 0
+	let g:vimmake_build_timer = 25
 endif
 
 " will be executed after async build finished
@@ -406,10 +406,19 @@ endfunc
 
 " invoked on timer
 function! g:Vimmake_Build_OnTimer(id)
-	if exists('s:build_job')
-		call job_status(s:build_job)
+	let limit = (g:vimmake_build_timer < 10)? 10 : g:vimmake_build_timer
+	if s:build_nvim == 0
+		if exists('s:build_job')
+			call job_status(s:build_job)
+		endif
+		call s:Vimmake_Build_Update(limit)
+		if and(s:build_state, 7) == 7
+			if s:build_head == s:build_tail
+				call s:Vimmake_Build_OnFinish()
+			endif
+		endif
+	else
 	endif
-	call s:Vimmake_Build_Update(5 + g:vimmake_build_timer)
 endfunc
 
 " invoked on "callback" when job output
@@ -422,28 +431,12 @@ function! s:Vimmake_Build_OnCallback(channel, text)
 	endif
 	let s:build_output[s:build_head] = a:text
 	let s:build_head += 1
-	if g:vimmake_build_timer <= 0
-		call s:Vimmake_Build_Update(-1)
-	endif
 endfunc
 
 " because exit_cb and close_cb are disorder, we need OnFinish to guarantee
 " both of then have already invoked
-function! s:Vimmake_Build_OnFinish(what)
+function! s:Vimmake_Build_OnFinish()
 	" caddexpr '(OnFinish): '.a:what.' '.s:build_state
-	if s:build_state == 0
-		return -1
-	endif
-	if a:what == 0
-		let s:build_state = or(s:build_state, 2)
-	elseif a:what == 1
-		let s:build_state = or(s:build_state, 4)
-	else
-		let s:build_state = 7
-	endif
-	if and(s:build_state, 7) != 7
-		return -2
-	endif
 	if exists('s:build_job')
 		unlet s:build_job
 	endif
@@ -491,8 +484,9 @@ function! s:Vimmake_Build_OnClose(channel)
 	" caddexpr "[close]"
 	let s:build_debug = 1
 	let l:limit = 128
+	let l:options = {'timeout':0}
 	while ch_status(a:channel) == 'buffered'
-		let l:text = ch_read(a:channel)
+		let l:text = ch_read(a:channel, l:options)
 		if l:text == '' " important when child process is killed
 			let l:limit -= 1
 			if l:limit < 0 | break | endif
@@ -501,18 +495,17 @@ function! s:Vimmake_Build_OnClose(channel)
 		endif
 	endwhile
 	let s:build_debug = 0
-	call s:Vimmake_Build_Update(-1)
-	call s:Vimmake_Build_OnFinish(1)
 	if exists('s:build_job')
 		call job_status(s:build_job)
 	endif
+	let s:build_state = or(s:build_state, 4)
 endfunc
 
 " invoked on "exit_cb" when job exited
 function! s:Vimmake_Build_OnExit(job, message)
 	" caddexpr "[exit]: ".a:message." ".type(a:message)
 	let s:build_code = a:message
-	call s:Vimmake_Build_OnFinish(0)
+	let s:build_state = or(s:build_state, 2)
 endfunc
 
 " invoked on neovim when stderr/stdout/exit
@@ -530,7 +523,7 @@ function! s:Vimmake_Build_NeoVim(job_id, data, event)
 		if type(a:data) == type(1)
 			let s:build_code = a:data
 		endif
-		call s:Vimmake_Build_OnFinish(2)
+		call s:Vimmake_Build_OnFinish()
 	endif
 endfunc
 
@@ -645,11 +638,8 @@ function! s:Vimmake_Build_Start(cmd)
 		endif
 		call setqflist([{'text':l:arguments}], 'a')
 		let s:build_start = float2nr(reltimefloat(reltime()))
-		if g:vimmake_build_timer > 0 && s:build_nvim == 0
-			let l:options = {'repeat':-1}
-			let l:name = 'g:Vimmake_Build_OnTimer'
-			let s:build_timer = timer_start(100, l:name, l:options)
-		endif
+		let l:name = 'g:Vimmake_Build_OnTimer'
+		let s:build_timer = timer_start(100, l:name, {'repeat':-1})
 		let s:build_state = 1
 		let g:vimmake_build_status = "running"
 		let s:build_info.post = s:build_info.postsave
@@ -675,6 +665,10 @@ function! s:Vimmake_Build_Stop(how)
 		return -1
 	endif
 	if l:how == '' | let l:how = 'term' | endif
+	while s:build_head > s:build_tail
+		let s:build_head -= 1
+		unlet s:build_output[s:build_head]
+	endwhile
 	if exists('s:build_job')
 		if s:build_nvim == 0
 			if job_status(s:build_job) == 'run'
@@ -926,7 +920,7 @@ function! vimmake#run(bang, opts, args)
 			exec opts.post
 		endif
 	elseif l:mode <= 2
-		exec '!'. l:command
+		exec '!'. escape(l:command, '%#')
 		let g:vimmake_text = opts.text
 		if opts.post != '' 
 			exec opts.post
@@ -965,7 +959,7 @@ function! vimmake#run(bang, opts, args)
 			redraw
 		else
 			if l:mode == 4
-				exec '!' . l:command
+				exec '!' . escape(l:command, '%#')
 			else
 				call system(l:command . ' &')
 			endif
@@ -1359,29 +1353,20 @@ endfunc
 "----------------------------------------------------------------------
 " grep code
 "----------------------------------------------------------------------
-if !exists('g:vimmake_grep')
-	let g:vimmake_grep = ['c', 'cpp', 'cc', 'h', 'hpp', 'hh', 'as']
-	let g:vimmake_grep += ['m', 'mm', 'py', 'js', 'php', 'java', 'vim']
-	let g:vimmake_grep += ['asm', 's', 'pyw', 'lua', 'go']
+if !exists('g:vimmake_grep_exts')
+	let g:vimmake_grep_exts = ['c', 'cpp', 'cc', 'h', 'hpp', 'hh', 'as']
+	let g:vimmake_grep_exts += ['m', 'mm', 'py', 'js', 'php', 'java', 'vim']
+	let g:vimmake_grep_exts += ['asm', 's', 'pyw', 'lua', 'go']
 endif
 
 function! vimmake#grep(text, cwd)
-	let l:grep = &grepprg
-	if strpart(l:grep, 0, 8) == 'findstr '
+	let mode = get(g:, 'vimmake_grep_mode', '')
+	if mode == ''
+		let mode = (s:vimmake_windows == 0)? 'grep' : 'findstr'
+	endif
+	if mode == 'grep'
 		let l:inc = ''
-		for l:item in g:vimmake_grep
-            if a:cwd == '.' || a:cwd == ''
-                let l:inc .= '*.'.l:item.' '
-            else
-                let l:full = vimmake#fullname(a:cwd)
-				let l:inc .= '"%CD%/*.'.l:item.'" '
-            endif
-		endfor
-		let options = { 'program': 'grep', 'cwd':a:cwd }
-		call vimmake#run('', options, '@ /s /C:"'.a:text.'" '. l:inc)
-	else
-		let l:inc = ''
-		for l:item in g:vimmake_grep
+		for l:item in g:vimmake_grep_exts
 			let l:inc .= " --include=*." . l:item
 		endfor
         if a:cwd == '.' || a:cwd == ''
@@ -1390,7 +1375,34 @@ function! vimmake#grep(text, cwd)
             let l:full = vimmake#fullname(a:cwd)
             let l:inc .= ' '.shellescape(l:full)
         endif
-		exec 'VimMake -program=grep @ -R ' .shellescape(a:text). l:inc
+		let cmd = 'grep -n -s -R ' .shellescape(a:text). l:inc .' /dev/null'
+		call vimmake#run('', {}, cmd)
+	elseif mode == 'findstr'
+		let l:inc = ''
+		for l:item in g:vimmake_grep_exts
+            if a:cwd == '.' || a:cwd == ''
+                let l:inc .= '*.'.l:item.' '
+            else
+                let l:full = vimmake#fullname(a:cwd)
+				let l:inc .= '"%CD%/*.'.l:item.'" '
+            endif
+		endfor
+		let options = { 'cwd':a:cwd }
+		call vimmake#run('', options, 'findstr /n /s /C:"'.a:text.'" '.l:inc)
+	elseif mode == 'ag'
+		let inc = []
+		for item in g:vimmake_grep_exts
+			let inc += ['\.'.item]
+		endfor
+		let cmd = 'ag '
+		if len(inc) > 0
+			let cmd .= '-G '.shellescape('('.join(inc, '|').')$'). ' '
+		endif
+		let cmd .= '--nogroup --nocolor '.shellescape(a:text)
+        if a:cwd != '.' && a:cwd != ''
+			let cmd .= ' '. shellescape(vimmake#fullname(a:cwd))
+        endif
+		call vimmake#run('', {'mode':0}, cmd)
 	endif
 endfunc
 
