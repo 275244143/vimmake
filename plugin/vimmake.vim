@@ -411,13 +411,12 @@ function! g:Vimmake_Build_OnTimer(id)
 		if exists('s:build_job')
 			call job_status(s:build_job)
 		endif
-		call s:Vimmake_Build_Update(limit)
-		if and(s:build_state, 7) == 7
-			if s:build_head == s:build_tail
-				call s:Vimmake_Build_OnFinish()
-			endif
+	endif
+	call s:Vimmake_Build_Update(limit)
+	if and(s:build_state, 7) == 7
+		if s:build_head == s:build_tail
+			call s:Vimmake_Build_OnFinish()
 		endif
-	else
 	endif
 endfunc
 
@@ -518,12 +517,11 @@ function! s:Vimmake_Build_NeoVim(job_id, data, event)
 			let s:build_head += 1
 			let l:index += 1
 		endwhile
-		call s:Vimmake_Build_Update(-1)
 	elseif a:event == 'exit'
 		if type(a:data) == type(1)
 			let s:build_code = a:data
 		endif
-		call s:Vimmake_Build_OnFinish()
+		let s:build_state = or(s:build_state, 6)
 	endif
 endfunc
 
