@@ -414,6 +414,10 @@ endfunc
 " invoked on timer
 function! g:Vimmake_Build_OnTimer(id)
 	let limit = (g:vimmake_build_timer < 10)? 10 : g:vimmake_build_timer
+	" check on command line window
+	if &ft == 'vim' && &buftype == 'nofile'
+		return
+	endif
 	if s:build_nvim == 0
 		if exists('s:build_job')
 			call job_status(s:build_job)
