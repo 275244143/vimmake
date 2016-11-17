@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com
-" Last change: 2016.11.13
+" Last change: 2016.11.17
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -223,6 +223,13 @@ function! s:NotSupport()
 	call s:ErrorMsg(msg)
 endfunc
 
+" run autocmd
+function! s:AutoCmd(name)
+	if has('autocmd')
+		exec 'silent doautocmd User VimMake'.a:name
+	endif
+endfunc
+
 
 "----------------------------------------------------------------------
 "- build in background
@@ -394,13 +401,13 @@ endfunc
 function! s:Vimmake_Build_AutoCmd(mode, auto)
 	if !has('autocmd') | return | endif
 	let name = (a:auto == '')? g:vimmake_build_auto : a:auto
-	if name !~ '^\w\+' || name == 'NONE' || name == '<NONE>'
+	if name !~ '^\w\+$' || name == 'NONE' || name == '<NONE>'
 		return
 	endif
 	if a:mode == 0
-		exec 'silent doautocmd QuickFixCmdPre '. name
+		silent exec 'doautocmd QuickFixCmdPre '. name
 	else
-		exec 'silent doautocmd QuickFixCmdPost '. name
+		silent exec 'doautocmd QuickFixCmdPost '. name
 	endif
 endfunc
 
@@ -466,8 +473,6 @@ function! s:Vimmake_Build_OnFinish()
 	if g:vimmake_build_bell != 0
 		exec "norm! \<esc>"
 	endif
-	redrawstatus!
-	redraw
 	if s:build_info.post != ''
 		exec s:build_info.post
 		let s:build_info.post = ''
@@ -476,6 +481,9 @@ function! s:Vimmake_Build_OnFinish()
 		exec g:vimmake_build_post
 	endif
 	call s:Vimmake_Build_AutoCmd(1, s:build_info.auto)
+	call s:AutoCmd('Stop')
+	redrawstatus!
+	redraw
 endfunc
 
 " invoked on "close_cb" when channel closed
@@ -595,6 +603,7 @@ function! s:Vimmake_Build_Start(cmd)
 		let l:name = join(l:vector, ', ')
 	endif
 	let s:build_efm = &errorformat
+	call s:AutoCmd('Pre')
 	if s:build_nvim == 0
 		let l:options = {}
 		let l:options['callback'] = function('s:Vimmake_Build_OnCallback')
@@ -645,11 +654,13 @@ function! s:Vimmake_Build_Start(cmd)
 		let s:build_info.postsave = ''
 		let s:build_info.autosave = ''
 		let g:vimmake_text = s:build_info.text
-		redrawstatus!
 		call s:Vimmake_Build_AutoCmd(0, s:build_info.auto)
+		call s:AutoCmd('Start')
+		redrawstatus!
 	else
 		unlet s:build_job
 		call s:ErrorMsg("Background job start failed '".a:cmd."'")
+		redrawstatus!
 		return -5
 	endif
 	return 0
@@ -893,8 +904,12 @@ function! vimmake#run(bang, opts, args)
 		let s:build_info.postsave = opts.post
 		let s:build_info.autosave = opts.auto
 		let s:build_info.text = opts.text
-		call s:Vimmake_Build_Start(l:command)
+		if s:Vimmake_Build_Start(l:command) != 0
+			call s:AutoCmd('Error')
+		endif
 	elseif l:mode <= 1 && has('quickfix')
+		call s:AutoCmd('Pre')
+		call s:AutoCmd('Start')
 		let l:makesave = &l:makeprg
 		let l:script = s:ScriptWrite(l:command, 0)
 		if s:vimmake_windows != 0
@@ -917,12 +932,16 @@ function! vimmake#run(bang, opts, args)
 		if opts.post != '' 
 			exec opts.post
 		endif
+		call s:AutoCmd('Stop')
 	elseif l:mode <= 2
+		call s:AutoCmd('Pre')
+		call s:AutoCmd('Start')
 		exec '!'. escape(l:command, '%#')
 		let g:vimmake_text = opts.text
 		if opts.post != '' 
 			exec opts.post
 		endif
+		call s:AutoCmd('Stop')
 	elseif l:mode == 3
 		if s:vimmake_windows != 0 && has('python')
 			let l:script = s:ScriptWrite(l:command, 0)
