@@ -949,19 +949,38 @@ function! vimmake#run(bang, opts, args)
 	elseif l:mode == 3
 		if s:vimmake_windows != 0 && has('python')
 			let l:script = s:ScriptWrite(l:command, 0)
-			python import vim, subprocess
-			python x = [vim.eval('l:script')]
-			python m = subprocess.PIPE
-			python n = subprocess.STDOUT
-			python s = True
-			python p = subprocess.Popen(x, shell = s, stdout = m, stderr = n)
-			python t = p.stdout.read()
-			python p.stdout.close()
-			python p.wait()
-			python t = t.replace('\\', '\\\\').replace('"', '\\"')
-			python t = t.replace('\n', '\\n').replace('\r', '\\r')
-			python vim.command('let l:text = "%s"'%t)
-			let l:retval = l:text
+			py import subprocess, vim
+			py argv = {'args': vim.eval('l:script'), 'shell': True}
+			py argv['stdout'] = subprocess.PIPE
+			py argv['stderr'] = subprocess.STDOUT
+			py p = subprocess.Popen(**argv)
+			py text = p.stdout.read()
+			py p.stdout.close()
+			py p.wait()
+			if has('patch-7.4.145') || v:version >= 800
+				let l:retval = pyeval('text')
+			else
+				py text = text.replace('\\', '\\\\').replace('"', '\\"')
+				py text = text.replace('\n', '\\n').replace('\r', '\\r')
+				py vim.command('let l:retval = "%s"'%text)
+			endif
+		elseif s:vimmake_windows != 0 && has('python3')
+			let l:script = s:ScriptWrite(l:command, 0)
+			py3 import subprocess, vim
+			py3 argv = {'args': vim.eval('l:script'), 'shell': True}
+			py3 argv['stdout'] = subprocess.PIPE
+			py3 argv['stderr'] = subprocess.STDOUT
+			py3 p = subprocess.Popen(**argv)
+			py3 text = p.stdout.read()
+			py3 p.stdout.close()
+			py3 p.wait()
+			if has('patch-7.4.145') || v:version >= 800
+				let l:retval = py3eval('text')
+			else
+				py3 text = text.replace('\\', '\\\\').replace('"', '\\"')
+				py3 text = text.replace('\n', '\\n').replace('\r', '\\r')
+				py3 vim.command('let l:retval = "%s"'%text)
+			endif
 		else
 			let l:retval = system(l:command)
 		endif
@@ -1239,7 +1258,7 @@ function! s:Cmd_VimBuild(bang, ...)
 		return
 	endif
 	if a:bang != '!'
-		try | silent update | catch | endtry
+		silent! update
 	endif
 	let l:what = a:1
 	let l:conf = ""
@@ -1261,7 +1280,8 @@ function! s:Cmd_VimBuild(bang, ...)
 			let l:flags .= ' -lstdc++'
 		endif
 		let l:cmd = l:cc . ' -Wall '. l:source . ' -o ' . l:output
-		exec vimmake .l:cmd . ' ' . l:flags
+		let l:cmd .= (l:conf == '')? '' : (' '. l:conf)
+		exec vimmake .l:cmd . ' ' . l:flags 
 	elseif index(['1', 'make'], l:what) >= 0
 		if l:conf == ''
 			exec vimmake .'make'
@@ -1318,12 +1338,8 @@ endfunc
 "----------------------------------------------------------------------
 " guess root, '' as current direct, '%' as current buffer
 "----------------------------------------------------------------------
-if !exists('g:vimmake_rootmarks')
-    let g:vimmake_rootmarks = ['.project', '.git', '.hg', '.svn', '.root']
-endif
-
-function! vimmake#get_root(path)
-    function! s:guess_root(filename)
+function! vimmake#find_root(path, markers)
+    function! s:guess_root(filename, markers)
         let fullname = vimmake#fullname(a:filename)
         if exists('b:vimmake_root')
             let l:vimmake_root = fnamemodify(b:vimmake_root, ':p')
@@ -1343,7 +1359,7 @@ function! vimmake#get_root(path)
 		endif
 		while 1
 			let prev = pivot
-			for marker in g:vimmake_rootmarks
+			for marker in a:markers
 				let newname = s:PathJoin(pivot, marker)
 				if filereadable(newname)
 					return pivot
@@ -1358,7 +1374,7 @@ function! vimmake#get_root(path)
 		endwhile
         return ''
     endfunc
-	let root = s:guess_root(a:path)
+	let root = s:guess_root(a:path, a:markers)
 	if len(root)
 		return vimmake#fullname(root)
 	endif
@@ -1368,6 +1384,15 @@ function! vimmake#get_root(path)
 		return fullname
 	endif
 	return vimmake#fullname(fnamemodify(fullname, ':h'))
+endfunc
+
+
+function! vimmake#get_root(path)
+	let markers = ['.project', '.git', '.hg', '.svn', '.root']
+	if exists('g:vimmake_rootmarks')
+		let markers = g:vimmake_rootmarks
+	endif
+	return vimmake#find_root(a:path, markers)
 endfunc
 
 
@@ -1675,6 +1700,48 @@ function! vimmake#update_tags(cwd, mode, outname)
 			let l:fullname = shellescape(l:fullname)
 			call vimmake#run('', l:options, 'pycscope -R -f '.l:fullname)
 		endif
+	endif
+endfunc
+
+
+" call python system to avoid window flicker on windows
+function! vimmake#python_system(command)
+	if s:vimmake_windows != 0 && has('python')
+		py import subprocess, vim
+		py argv = {'args': vim.eval('a:command'), 'shell': True}
+		py argv['stdout'] = subprocess.PIPE
+		py argv['stderr'] = subprocess.STDOUT
+		py p = subprocess.Popen(**argv)
+		py text = p.stdout.read()
+		py p.stdout.close()
+		py p.wait()
+		if has('patch-7.4.145') || v:version >= 800
+			let l:text = pyeval('text')
+		else
+			py text = text.replace('\\', '\\\\').replace('"', '\\"')
+			py text = text.replace('\n', '\\n').replace('\r', '\\r')
+			py vim.command('let l:text = "%s"'%text)
+		endif
+		return l:text
+	elseif s:vimmake_windows != 0 && has('python3')
+		py3 import subprocess, vim
+		py3 argv = {'args': vim.eval('a:command'), 'shell': True}
+		py3 argv['stdout'] = subprocess.PIPE
+		py3 argv['stderr'] = subprocess.STDOUT
+		py3 p = subprocess.Popen(**argv)
+		py3 text = p.stdout.read()
+		py3 p.stdout.close()
+		py3 p.wait()
+		if has('patch-7.4.145') || v:version >= 800
+			let l:text = py3eval('text')
+		else
+			py3 text = text.replace('\\', '\\\\').replace('"', '\\"')
+			py3 text = text.replace('\n', '\\n').replace('\r', '\\r')
+			py3 vim.command('let l:text = "%s"'%text)
+		endif
+		return l:text
+	else
+		return system(a:command)
 	endif
 endfunc
 
