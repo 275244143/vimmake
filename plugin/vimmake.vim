@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com
-" Last change: 2016.11.17
+" Last change: 2016.11.25
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -246,6 +246,7 @@ let s:build_debug = 0
 let s:build_quick = 0
 let s:build_hold = 0
 let s:build_scroll = 0
+let s:build_congest = 0
 let s:build_efm = &errorformat
 
 " check :cbottom available, cursor in quick need to hold ?
@@ -255,6 +256,12 @@ if s:build_nvim == 0
 else
 	let s:build_quick = 0
 	let s:build_hold = 1
+endif
+
+" check if we have vim 8.0.100
+if s:build_nvim == 0 && v:version >= 800
+	let s:build_congest = has('patch-8.0.100')? 1 : 0
+	let s:build_congest = 0
 endif
 
 " scroll quickfix down
@@ -441,6 +448,9 @@ function! s:Vimmake_Build_OnCallback(channel, text)
 	endif
 	let s:build_output[s:build_head] = a:text
 	let s:build_head += 1
+	if s:build_congest != 0
+		call s:Vimmake_Build_Update(-1)
+	endif
 endfunc
 
 " because exit_cb and close_cb are disorder, we need OnFinish to guarantee
