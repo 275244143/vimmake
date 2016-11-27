@@ -1716,43 +1716,10 @@ endfunc
 
 " call python system to avoid window flicker on windows
 function! vimmake#python_system(command)
-	if s:vimmake_windows != 0 && has('python')
-		py import subprocess, vim
-		py argv = {'args': vim.eval('a:command'), 'shell': True}
-		py argv['stdout'] = subprocess.PIPE
-		py argv['stderr'] = subprocess.STDOUT
-		py p = subprocess.Popen(**argv)
-		py text = p.stdout.read()
-		py p.stdout.close()
-		py p.wait()
-		if has('patch-7.4.145') || v:version >= 800
-			let l:text = pyeval('text')
-		else
-			py text = text.replace('\\', '\\\\').replace('"', '\\"')
-			py text = text.replace('\n', '\\n').replace('\r', '\\r')
-			py vim.command('let l:text = "%s"'%text)
-		endif
-		return l:text
-	elseif s:vimmake_windows != 0 && has('python3')
-		py3 import subprocess, vim
-		py3 argv = {'args': vim.eval('a:command'), 'shell': True}
-		py3 argv['stdout'] = subprocess.PIPE
-		py3 argv['stderr'] = subprocess.STDOUT
-		py3 p = subprocess.Popen(**argv)
-		py3 text = p.stdout.read()
-		py3 p.stdout.close()
-		py3 p.wait()
-		if has('patch-7.4.145') || v:version >= 800
-			let l:text = py3eval('text')
-		else
-			py3 text = text.replace('\\', '\\\\').replace('"', '\\"')
-			py3 text = text.replace('\n', '\\n').replace('\r', '\\r')
-			py3 vim.command('let l:text = "%s"'%text)
-		endif
-		return l:text
-	else
-		return system(a:command)
-	endif
+	let text = g:vimmake_text
+	let content = vimmake#run('', {'mode': 3}, '@ ' . a:command)
+	let g:vimmake_text = text
+	return content
 endfunc
 
 
