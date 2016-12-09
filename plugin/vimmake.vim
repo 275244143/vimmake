@@ -1154,28 +1154,20 @@ endfunc
 "----------------------------------------------------------------------
 function! s:Cmd_VimExecute(bang, ...)
 	let cd = haslocaldir()? 'lcd ' : 'cd '
-	let l:mode = ''
+	let l:mode = (a:0 < 1)? '' : a:1
 	let l:cwd = g:vimmake_cwd
-	if a:0 >= 1
-		let l:mode = a:1
-	endif
 	if a:0 >= 2
 		if index(['1', 'true', 'True', 'yes', 'cwd', 'cd'], a:2) >= 0 
 			let l:cwd = 1 
 		endif
 	endif
-	if a:bang != '!'
-		try | silent update | catch | endtry
-	endif
+	if a:bang != '!' | silent! update | endif
 	if bufname('%') == '' | return | endif
-	let l:ext = expand("%:e")
+	let l:ext = tolower(expand("%:e"))
 	let l:savecwd = getcwd()
 	if l:cwd > 0
 		let l:dest = expand('%:p:h')
-		try
-			silent exec cd . fnameescape(l:dest)
-		catch
-		endtry
+		silent! exec cd . fnameescape(l:dest)
 	endif
 	if index(['', '0', 'file', 'filename'], l:mode) >= 0
 		call s:ExecuteMe(0)
@@ -1212,6 +1204,8 @@ function! s:Cmd_VimExecute(bang, ...)
 			silent exec '!start cmd /C ruby ' . l:fname . ' & pause'
 		elseif l:ext == 'php'
 			silent exec '!start cmd /C php ' . l:fname . ' & pause'
+		elseif l:ext == 'ps1'
+			silent exec '!start cmd /C powershell '. l:fname. ' & pause'
 		elseif index(['osa', 'scpt', 'applescript'], l:ext) >= 0
 			silent exec '!start cmd /C osascript '.l:fname.' & pause'
 		else
@@ -1242,10 +1236,7 @@ function! s:Cmd_VimExecute(bang, ...)
 		endif
 	endif
 	if l:cwd > 0 
-		try
-			silent exec cd . fnameescape(l:savecwd)
-		catch
-		endtry
+		silent! exec cd . fnameescape(l:savecwd)
 	endif
 endfunc
 
@@ -1667,7 +1658,7 @@ function! vimmake#update_filelist(outname)
 endfunc
 
 if !exists('g:vimmake_ctags_flags')
-	let g:vimmake_ctags_flags = '--fields=+iaS --extra=+q --c++-kinds=+px'
+	let g:vimmake_ctags_flags = '--fields=+niazS --extra=+q --c++-kinds=+px'
 	let g:vimmake_ctags_flags.= ' --c-kinds=+p -n'
 endif
 
