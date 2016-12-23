@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com
-" Last change: 2016.11.25
+" Last change: 2016.12.23
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -138,6 +138,16 @@ endif
 " trigger autocmd event name for VimBuild
 if !exists('g:vimmake_build_name')
 	let g:vimmake_build_name = ''
+endif
+
+" override &shell
+if !exists('g:vimmake_build_shell')
+	let g:vimmake_build_shell = ''
+endif
+
+" override &shellcmdflag
+if !exists('g:vimmake_build_shellflag')
+	let g:vimmake_build_shellflag = ''
 endif
 
 " build info
@@ -579,12 +589,21 @@ function! s:Vimmake_Build_Start(cmd)
 		echo "empty cmd"
 		return -3
 	endif
-	if !executable(&shell)
-		let l:text = "invalid config in &shell and &shellcmdflag"
-		call s:ErrorMsg(l:text . ", &shell must be an executable.")
-		return -4
+	if g:vimmake_build_shell == ''
+		if !executable(&shell)
+			let l:text = "invalid config in &shell and &shellcmdflag"
+			call s:ErrorMsg(l:text . ", &shell must be an executable.")
+			return -4
+		endif
+		let l:args = [&shell, &shellcmdflag]
+	else
+		if !executable(g:vimmake_build_shell)
+			let l:text = "invalid config in g:vimmake_build_shell"
+			call s:ErrorMsg(l:text . ", it must be an executable.")
+			return -4
+		endif
+		let l:args = [g:vimmake_build_shell, g:vimmake_build_shellflag]
 	endif
-	let l:args = [&shell, &shellcmdflag]
 	let l:name = []
 	if type(a:cmd) == 1
 		let l:name = a:cmd
