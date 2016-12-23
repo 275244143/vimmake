@@ -297,8 +297,8 @@ endfunc
 function! s:Vimmake_Build_AutoScroll()
 	if s:build_quick == 0
 		let l:winnr = winnr()			
-		windo call s:Vimmake_Build_Scroll()
-		silent exec ''.l:winnr.'wincmd w'
+		noautocmd windo call s:Vimmake_Build_Scroll()
+		noautocmd silent exec ''.l:winnr.'wincmd w'
 	else
 		cbottom
 	endif
@@ -320,8 +320,8 @@ function! s:Vimmake_Build_QuickReset()
 		call s:Vimmake_Build_ViewReset()
 	else
 		let l:winnr = winnr()
-		windo call s:Vimmake_Build_ViewReset()
-		silent exec ''.l:winnr.'wincmd w'
+		noautocmd windo call s:Vimmake_Build_ViewReset()
+		noautocmd silent exec ''.l:winnr.'wincmd w'
 	endif
 endfunc
 
@@ -339,8 +339,8 @@ function! s:Vimmake_Build_CheckScroll()
 	elseif g:vimmake_build_last == 1
 		let s:build_last = 1
 		let l:winnr = winnr()
-		windo call s:Vimmake_Build_Cursor()
-		silent exec ''.l:winnr.'wincmd w'
+		noautocmd windo call s:Vimmake_Build_Cursor()
+		noautocmd silent! exec ''.l:winnr.'wincmd w'
 		return s:build_last
 	elseif g:vimmake_build_last == 2
 		return 1
