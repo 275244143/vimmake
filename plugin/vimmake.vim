@@ -1490,7 +1490,7 @@ command! -bang -nargs=+ GrepCode call s:Cmd_GrepCode('<bang>', <f-args>)
 "----------------------------------------------------------------------
 " cscope easy
 "----------------------------------------------------------------------
-function! s:Cmd_VimScope(what, name)
+function! s:Cmd_VimScope(bang, what, name)
 	let l:text = ''
 	if a:what == '0' || a:what == 's'
 		let l:text = 'symbol "'.a:name.'"'
@@ -1512,24 +1512,33 @@ function! s:Cmd_VimScope(what, name)
 		let l:text = 'assigned "'.a:name.'"'
 	endif
 	silent cexpr "[cscope ".a:what.": ".l:text."]"
+	let success = 1
 	try
 		exec 'cs find '.a:what.' '.fnameescape(a:name)
 	catch /^Vim\%((\a\+)\)\=:E259/
 		echohl ErrorMsg
 		echo "E259: not find '".a:name."'"
 		echohl NONE
+		let success = 0
 	catch /^Vim\%((\a\+)\)\=:E567/
 		echohl ErrorMsg
 		echo "E567: no cscope connections"
 		echohl NONE
+		let success = 0
 	catch /^Vim\%((\a\+)\)\=:E/
 		echohl ErrorMsg
 		echo "ERROR: cscope error"
 		echohl NONE
+		let success = 0
 	endtry
+	if success != 0 && a:bang != '!'
+		if has('autocmd')
+			doautocmd User VimScope
+		endif
+	endif
 endfunc
 
-command! -nargs=* VimScope call s:Cmd_VimScope(<f-args>)
+command! -nargs=* -bang VimScope call s:Cmd_VimScope("<bang>", <f-args>)
 
 
 "----------------------------------------------------------------------
