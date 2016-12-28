@@ -1018,7 +1018,7 @@ function! vimmake#run(bang, opts, args)
 			exec opts.post
 		endif
 	elseif l:mode <= 5
-		if s:vimmake_windows != 0 && has('gui_running')
+		if s:vimmake_windows != 0 && (has('gui_running') || has('nvim'))
 			let l:ccc = shellescape(s:ScriptWrite(l:command, 1))
 			if l:mode == 4
 				silent exec '!start cmd /C '. l:ccc
@@ -1144,21 +1144,21 @@ command! -bang -nargs=+ VimTool call s:Cmd_VimTool('<bang>', <f-args>)
 function! s:ExecuteMe(mode)
 	if a:mode == 0		" Execute current filename
 		let l:fname = shellescape(expand("%:p"))
-		if has('gui_running') && (s:vimmake_windows != 0)
+		if (has('gui_running') || has('nvim')) && (s:vimmake_windows != 0)
 			silent exec '!start cmd /C '. l:fname .' & pause'
 		else
 			exec '!' . l:fname
 		endif
 	elseif a:mode == 1	" Execute current filename without extname
 		let l:fname = shellescape(expand("%:p:r"))
-		if has('gui_running') && (s:vimmake_windows != 0)
+		if (has('gui_running') || has('nvim')) && (s:vimmake_windows != 0)
 			silent exec '!start cmd /C '. l:fname .' & pause'
 		else
 			exec '!' . l:fname
 		endif
 	elseif a:mode == 2
 		let l:fname = shellescape(expand("%"))
-		if has('gui_running') && (s:vimmake_windows != 0)
+		if (has('gui_running') || has('nvim')) && (s:vimmake_windows != 0)
 			silent exec '!start cmd /C emake -e '. l:fname .' & pause'
 		else
 			exec '!emake -e ' . l:fname
@@ -1204,7 +1204,7 @@ function! s:Cmd_VimExecute(bang, ...)
 		call s:ExecuteMe(2)
 	elseif &filetype == "vim"
 		exec 'source ' . fnameescape(expand("%"))
-	elseif has('gui_running') && (s:vimmake_windows != 0)
+	elseif (has('gui_running') || has('nvim')) && (s:vimmake_windows != 0)
 		let l:cmd = get(g:vimmake_extrun, l:ext, '')
 		let l:fname = shellescape(expand("%"))
 		if l:cmd != ''
