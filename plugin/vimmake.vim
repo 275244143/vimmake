@@ -545,7 +545,11 @@ function! s:Vimmake_Build_NeoVim(job_id, data, event)
 		let l:index = 0
 		let l:size = len(a:data)
 		while l:index < l:size
-			let s:build_output[s:build_head] = a:data[l:index]
+			let s:text = a:data[l:index]
+			if s:vimmake_windows != 0
+				let s:text = substitute(s:text, '\r$', '', 'g')
+			endif
+			let s:build_output[s:build_head] = s:text
 			let s:build_head += 1
 			let l:index += 1
 		endwhile
@@ -1145,21 +1149,33 @@ function! s:ExecuteMe(mode)
 	if a:mode == 0		" Execute current filename
 		let l:fname = shellescape(expand("%:p"))
 		if (has('gui_running') || has('nvim')) && (s:vimmake_windows != 0)
-			silent exec '!start cmd /C '. l:fname .' & pause'
+			if !has('nvim')
+				silent exec '!start cmd /C '. l:fname .' & pause'
+			else
+				call vimmake#run('', {'mode':4}, l:fname)
+			endif
 		else
 			exec '!' . l:fname
 		endif
 	elseif a:mode == 1	" Execute current filename without extname
 		let l:fname = shellescape(expand("%:p:r"))
 		if (has('gui_running') || has('nvim')) && (s:vimmake_windows != 0)
-			silent exec '!start cmd /C '. l:fname .' & pause'
+			if !has('nvim')
+				silent exec '!start cmd /C '. l:fname .' & pause'
+			else
+				call vimmake#run('', {'mode':4}, l:fname)
+			endif
 		else
 			exec '!' . l:fname
 		endif
 	elseif a:mode == 2
 		let l:fname = shellescape(expand("%"))
 		if (has('gui_running') || has('nvim')) && (s:vimmake_windows != 0)
-			silent exec '!start cmd /C emake -e '. l:fname .' & pause'
+			if !has('nvim')
+				silent exec '!start cmd /C emake -e '. l:fname .' & pause'
+			else
+				call vimmake#run('', {'mode':4}, "emake -e ". l:fname)
+			endif
 		else
 			exec '!emake -e ' . l:fname
 		endif
@@ -1207,28 +1223,33 @@ function! s:Cmd_VimExecute(bang, ...)
 	elseif (has('gui_running') || has('nvim')) && (s:vimmake_windows != 0)
 		let l:cmd = get(g:vimmake_extrun, l:ext, '')
 		let l:fname = shellescape(expand("%"))
-		if l:cmd != ''
-			silent exec '!start cmd /C '. l:cmd . ' ' . l:fname . ' & pause'
-		elseif index(['py', 'pyw', 'pyc', 'pyo'], l:ext) >= 0
-			silent exec '!start cmd /C python ' . l:fname . ' & pause'
-		elseif l:ext  == "js"
-			silent exec '!start cmd /C node ' . l:fname . ' & pause'
-		elseif l:ext == 'sh'
-			silent exec '!start cmd /C sh ' . l:fname . ' & pause'
-		elseif l:ext == 'lua'
-			silent exec '!start cmd /C lua ' . l:fname . ' & pause'
-		elseif l:ext == 'pl'
-			silent exec '!start cmd /C perl ' . l:fname . ' & pause'
-		elseif l:ext == 'rb'
-			silent exec '!start cmd /C ruby ' . l:fname . ' & pause'
-		elseif l:ext == 'php'
-			silent exec '!start cmd /C php ' . l:fname . ' & pause'
-		elseif l:ext == 'ps1'
-			silent exec '!start cmd /C powershell '. l:fname. ' & pause'
-		elseif index(['osa', 'scpt', 'applescript'], l:ext) >= 0
-			silent exec '!start cmd /C osascript '.l:fname.' & pause'
-		else
+		if l:cmd == ''
+			if index(['py', 'pyw', 'pyc', 'pyo'], l:ext) >= 0
+				let l:cmd = 'python'
+			elseif l:ext  == "js" || &ft == 'javascript'
+				let l:cmd = 'node'
+			elseif l:ext == 'sh' || &ft == 'sh'
+				let l:cmd = 'sh'
+			elseif l:ext == 'lua' || &ft == 'lua'
+				let l:cmd = 'lua'
+			elseif l:ext == 'pl' || &ft == 'perl'
+				let l:cmd = 'perl'
+			elseif l:ext == 'rb' || &ft == 'ruby'
+				let l:cmd = 'ruby'
+			elseif l:ext == 'php' || &ft == 'php'
+				let l:cmd = 'php'
+			elseif l:ext == 'ps1'
+				let l:cmd = 'powershell'
+			elseif index(['osa', 'scpt', 'applescript'], l:ext) >= 0
+				let l:cmd = 'osascript'
+			endif
+		endif
+		if l:cmd == ''
 			call s:ExecuteMe(0)
+		elseif !has('nvim')
+			silent exec '!start cmd /C '. l:cmd . ' ' . l:fname . ' & pause'
+		else
+			call vimmake#run('', {'mode':4}, l:cmd . ' ' . l:fname)
 		endif
 	else
 		let l:cmd = get(g:vimmake_extrun, l:ext, '')
@@ -1236,17 +1257,17 @@ function! s:Cmd_VimExecute(bang, ...)
 			exec '!'. l:cmd . ' ' . shellescape(expand("%"))
 		elseif index(['py', 'pyw', 'pyc', 'pyo'], l:ext) >= 0
 			exec '!python ' . shellescape(expand("%"))
-		elseif l:ext  == "js"
+		elseif l:ext  == "js" || &ft == 'javascript' 
 			exec '!node ' . shellescape(expand("%"))
-		elseif l:ext == 'sh'
+		elseif l:ext == 'sh' || &ft == 'sh'
 			exec '!sh ' . shellescape(expand("%"))
-		elseif l:ext == 'lua'
+		elseif l:ext == 'lua' || &ft == 'lua'
 			exec '!lua ' . shellescape(expand("%"))
-		elseif l:ext == 'pl'
+		elseif l:ext == 'pl' || &ft == 'perl'
 			exec '!perl ' . shellescape(expand("%"))
-		elseif l:ext == 'rb'
+		elseif l:ext == 'rb' || &ft == 'ruby'
 			exec '!ruby ' . shellescape(expand("%"))
-		elseif l:ext == 'php'
+		elseif l:ext == 'php' || &ft == 'php'
 			exec '!php ' . shellescape(expand("%"))
 		elseif index(['osa', 'scpt', 'applescript'], l:ext) >= 0
 			exec '!osascript '. shellescape(expand('%'))
