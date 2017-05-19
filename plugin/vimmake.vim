@@ -869,9 +869,14 @@ function! vimmake#run(bang, opts, args)
 	endif
 
 	" check if need to save
-	if get(l:opts, 'save', '')
+	let l:save = get(l:opts, 'save', '')
+	if l:save
 		try
-			silent update
+			if l:save == '1'
+				silent! update
+			else
+				silent! wall	
+			endif
 		catch /.*/
 		endtry
 	endif
@@ -1101,7 +1106,7 @@ function! s:Cmd_VimTool(bang, ...)
 	let l:fullname = s:PathJoin(l:home, l:fullname)
 	let l:value = get(g:vimmake_mode, l:command, '')
 	if a:bang != '!'
-		try | silent update | catch | endtry
+		try | silent wall | catch | endtry
 	endif
 	if type(l:value) == 0 
 		let l:mode = string(l:value) 
@@ -1196,7 +1201,7 @@ function! s:Cmd_VimExecute(bang, ...)
 			let l:cwd = 1 
 		endif
 	endif
-	if a:bang != '!' | silent! update | endif
+	if a:bang != '!' | silent! wall | endif
 	if bufname('%') == '' | return | endif
 	let l:ext = tolower(expand("%:e"))
 	let l:savecwd = getcwd()
