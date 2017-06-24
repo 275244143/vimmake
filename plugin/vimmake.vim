@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com
-" Last change: 2016.12.23
+" Last change: 2017.6.25
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -15,6 +15,7 @@
 "     $VIM_CWD       - Current directory
 "     $VIM_RELDIR    - File path relativize to current directory
 "     $VIM_RELNAME   - File name relativize to current directory 
+"     $VIM_ROOT      - Project root directory
 "     $VIM_CWORD     - Current word under cursor
 "     $VIM_CFILE     - Current filename under cursor
 "     $VIM_GUI       - Is running under gui ?
@@ -165,9 +166,9 @@ if !exists('g:vimmake_run_guess')
 	let g:vimmake_run_guess = []
 endif
 
-" extname -> command
-if !exists('g:vimmake_extrun')
-	let g:vimmake_extrun = {}
+" filetype -> command
+if !exists('g:vimmake_ftrun')
+	let g:vimmake_ftrun = {}
 endif
 
 
@@ -821,78 +822,102 @@ function! s:ScriptWrite(command, pause)
 	return l:tmp
 endfunc
 
+" get full file name 
+function! vimmake#fullname(f)
+	let f = a:f
+	if f =~ "'."
+		try
+			redir => m
+			silent exe ':marks' f[1]
+			redir END
+			let f = split(split(m, '\n')[-1])[-1]
+			let f = filereadable(f)? f : ''
+		catch
+			let f = '%'
+		endtry
+	endif
+	let f = (f != '%')? f : expand('%')
+	let f = fnamemodify(f, ':p')
+	if s:vimmake_windows
+		let f = substitute(f, "\\", '/', 'g')
+	endif
+	if len(f) > 1
+		let size = len(f)
+		if f[size - 1] == '/'
+			let f = strpart(f, 0, size - 1)
+		endif
+	endif
+	return f
+endfunc
+
+" find project root
+function! s:find_root(path, markers)
+    function! s:guess_root(filename, markers)
+        let fullname = vimmake#fullname(a:filename)
+        if exists('b:vimmake_root')
+            return b:vimmake_root
+        endif
+        if fullname =~ '^fugitive:/'
+            if exists('b:git_dir')
+                return fnamemodify(b:git_dir, ':h')
+            endif
+            return '' " skip any fugitive buffers early
+        endif
+		let pivot = fullname
+		if !isdirectory(pivot)
+			let pivot = fnamemodify(pivot, ':h')
+		endif
+		while 1
+			let prev = pivot
+			for marker in a:markers
+				let newname = s:PathJoin(pivot, marker)
+				if filereadable(newname)
+					return pivot
+				elseif isdirectory(newname)
+					return pivot
+				endif
+			endfor
+			let pivot = fnamemodify(pivot, ':h')
+			if pivot == prev
+				break
+			endif
+		endwhile
+        return ''
+    endfunc
+	let root = s:guess_root(a:path, a:markers)
+	if len(root)
+		return vimmake#fullname(root)
+	endif
+	" Not found: return parent directory of current file / file itself.
+	let fullname = vimmake#fullname(a:path)
+	if isdirectory(fullname)
+		return fullname
+	endif
+	return vimmake#fullname(fnamemodify(fullname, ':h'))
+endfunc
+
+" get project root
+function! vimmake#get_root(path)
+	let markers = ['.project', '.git', '.hg', '.svn', '.root']
+	if exists('g:vimmake_rootmarks')
+		let markers = g:vimmake_rootmarks
+	endif
+	let l:hr = s:find_root(a:path, markers)
+	if s:vimmake_windows
+		let l:hr = s:StringReplace(l:hr, '/', "\\")
+	endif
+	return l:hr
+endfunc
+
 
 "----------------------------------------------------------------------
 " run commands
 "----------------------------------------------------------------------
-function! vimmake#run(bang, opts, args)
-	let l:macros = {}
-	let l:macros['VIM_FILEPATH'] = expand("%:p")
-	let l:macros['VIM_FILENAME'] = expand("%:t")
-	let l:macros['VIM_FILEDIR'] = expand("%:p:h")
-	let l:macros['VIM_FILENOEXT'] = expand("%:t:r")
-	let l:macros['VIM_FILEEXT'] = "." . expand("%:e")
-	let l:macros['VIM_CWD'] = getcwd()
-	let l:macros['VIM_RELDIR'] = expand("%:h:.")
-	let l:macros['VIM_RENAME'] = expand("%:p:.")
-	let l:macros['VIM_CWORD'] = expand("<cword>")
-	let l:macros['VIM_CFILE'] = expand("<cfile>")
-	let l:macros['VIM_VERSION'] = ''.v:version
-	let l:macros['VIM_SVRNAME'] = v:servername
-	let l:macros['VIM_COLUMNS'] = ''.&columns
-	let l:macros['VIM_LINES'] = ''.&lines
-	let l:macros['VIM_GUI'] = has('gui_running')? 1 : 0
-	let l:macros['<cwd>'] = getcwd()
-	let l:command = s:StringStrip(a:args)
-	let cd = haslocaldir()? 'lcd ' : 'cd '
+function! s:run(opts)
+	let l:opts = a:opts
+	let l:mode = a:opts.mode
+	let l:command = a:opts.cmd
 	let l:retval = ''
-
-	" extract options
-	let [l:command, l:opts] = s:ExtractOpt(l:command)
-
-	" replace macros and setup environment variables
-	for [l:key, l:val] in items(l:macros)
-		let l:replace = (l:key[0] != '<')? '$('.l:key.')' : l:key
-		if l:key[0] != '<'
-			exec 'let $'.l:key.' = l:val'
-		endif
-		let l:command = s:StringReplace(l:command, l:replace, l:val)
-		let l:opts.cwd = s:StringReplace(l:opts.cwd, l:replace, l:val)
-		let l:opts.text = s:StringReplace(l:opts.text, l:replace, l:val)
-	endfor
-
-	" combine options
-	if type(a:opts) == type({})
-		for [l:key, l:val] in items(a:opts)
-			let l:opts[l:key] = l:val
-		endfor
-	endif
-
-	" check if need to save
-	let l:save = get(l:opts, 'save', '')
-	if l:save
-		try
-			if l:save == '1'
-				silent! update
-			else
-				silent! wall	
-			endif
-		catch /.*/
-		endtry
-	endif
-
-	if a:bang == '!'
-		let s:build_scroll = 0
-	else
-		let s:build_scroll = 1
-	endif
-
-	" check mode
-	let l:mode = g:vimmake_default
-
-	if l:opts.mode != ''
-		let l:mode = l:opts.mode
-	endif
 
 	" process makeprg/grepprg in -program=?
 	let l:program = ""
@@ -923,23 +948,10 @@ function! vimmake#run(bang, opts, args)
 
 	if l:mode >= 10
 		let l:opts.cmd = l:command
-		let l:opts.mode = l:mode
 		if g:vimmake_build_hook != ''
 			exec 'call '. g:vimmake_build_hook .'(l:opts)'
 		endif
 		return
-	endif
-
-	if l:opts.cwd != ''
-		let l:opts.savecwd = getcwd()
-		try
-			silent exec cd . fnameescape(l:opts.cwd)
-		catch /.*/
-			echohl ErrorMsg
-			echom "E344: Can't find directory \"".l:opts.cwd."\" in -cwd"
-			echohl NONE
-			return
-		endtry
 	endif
 
 	if l:mode == 0 && s:vimmake_advance != 0
@@ -1048,13 +1060,96 @@ function! vimmake#run(bang, opts, args)
 		endif
 	endif
 
+	return l:retval
+endfunc
+
+
+"----------------------------------------------------------------------
+" run command
+"----------------------------------------------------------------------
+function! vimmake#run(bang, opts, args)
+	let l:macros = {}
+	let l:macros['VIM_FILEPATH'] = expand("%:p")
+	let l:macros['VIM_FILENAME'] = expand("%:t")
+	let l:macros['VIM_FILEDIR'] = expand("%:p:h")
+	let l:macros['VIM_FILENOEXT'] = expand("%:t:r")
+	let l:macros['VIM_FILEEXT'] = "." . expand("%:e")
+	let l:macros['VIM_CWD'] = getcwd()
+	let l:macros['VIM_RELDIR'] = expand("%:h:.")
+	let l:macros['VIM_RENAME'] = expand("%:p:.")
+	let l:macros['VIM_CWORD'] = expand("<cword>")
+	let l:macros['VIM_CFILE'] = expand("<cfile>")
+	let l:macros['VIM_VERSION'] = ''.v:version
+	let l:macros['VIM_SVRNAME'] = v:servername
+	let l:macros['VIM_COLUMNS'] = ''.&columns
+	let l:macros['VIM_LINES'] = ''.&lines
+	let l:macros['VIM_GUI'] = has('gui_running')? 1 : 0
+	let l:macros['VIM_ROOT'] = vimmake#get_root('%')
+	let l:macros['<cwd>'] = getcwd()
+	let l:macros['<root>'] = l:macros['VIM_ROOT']
+	let cd = haslocaldir()? 'lcd ' : 'cd '
+	let l:retval = ''
+
+	" extract options
+	let [l:command, l:opts] = s:ExtractOpt(s:StringStrip(a:args))
+
+	" combine options
+	if type(a:opts) == type({})
+		for [l:key, l:val] in items(a:opts)
+			let l:opts[l:key] = l:val
+		endfor
+	endif
+
+	" check cwd
 	if l:opts.cwd != ''
-		silent exec cd fnameescape(l:opts.savecwd)
+		for [l:key, l:val] in items(l:macros)
+			let l:replace = (l:key[0] != '<')? '$('.l:key.')' : l:key
+			let l:opts.cwd = s:StringReplace(l:opts.cwd, l:replace, l:val)
+		endfor
+		let l:opts.savecwd = getcwd()
+		silent! exec cd . fnameescape(l:opts.cwd)
+		let l:macros['VIM_CWD'] = getcwd()
+		let l:macros['VIM_RELDIR'] = expand("%:h:.")
+		let l:macros['VIM_RENAME'] = expand("%:p:.")
+		let l:macros['VIM_CFILE'] = expand("<cfile>")
+		let l:macros['<cwd>'] = l:macros['VIM_CWD']
+	endif
+	
+	" replace macros and setup environment variables
+	for [l:key, l:val] in items(l:macros)
+		let l:replace = (l:key[0] != '<')? '$('.l:key.')' : l:key
+		if l:key[0] != '<'
+			exec 'let $'.l:key.' = l:val'
+		endif
+		let l:command = s:StringReplace(l:command, l:replace, l:val)
+		let l:opts.text = s:StringReplace(l:opts.text, l:replace, l:val)
+	endfor
+
+	" config
+	let l:opts.cmd = l:command
+	let l:opts.macros = l:macros
+	let l:opts.mode = get(l:opts, 'mode', g:vimmake_default)
+	let s:build_scroll = (a:bang == '!')? 0 : 1
+	
+	" check if need to save
+	let l:save = get(l:opts, 'save', '')
+
+	if l:save == '1'
+		silent! update 
+	elseif l:save
+		silent! wall
+	endif
+
+	" run command
+	let l:retval = s:run(l:opts)
+
+	" restore cwd
+	if l:opts.cwd != ''
+		silent! exec cd fnameescape(l:opts.savecwd)
 	endif
 
 	return l:retval
 endfunc
-
 
 
 "----------------------------------------------------------------------
@@ -1197,16 +1292,20 @@ function! s:Cmd_VimExecute(bang, ...)
 	let l:mode = (a:0 < 1)? '' : a:1
 	let l:cwd = g:vimmake_cwd
 	if a:0 >= 2
-		if index(['1', 'true', 'True', 'yes', 'cwd', 'cd'], a:2) >= 0 
-			let l:cwd = 1 
-		endif
+		let l:cwd = a:2
 	endif
 	if a:bang != '!' | silent! wall | endif
 	if bufname('%') == '' | return | endif
 	let l:ext = tolower(expand("%:e"))
 	let l:savecwd = getcwd()
-	if l:cwd > 0
-		let l:dest = expand('%:p:h')
+	if l:cwd
+		if l:cwd == 1
+			let l:dest = expand('%:p:h')
+		elseif l:cwd == 2
+			let l:dest = vimmake#get_root('%')
+		else
+			let l:dest = vimmake#get_root('%')
+		endif
 		silent! exec cd . fnameescape(l:dest)
 	endif
 	if index(['', '0', 'file', 'filename'], l:mode) >= 0
@@ -1226,22 +1325,22 @@ function! s:Cmd_VimExecute(bang, ...)
 	elseif &filetype == "vim"
 		exec 'source ' . fnameescape(expand("%"))
 	elseif (has('gui_running') || has('nvim')) && (s:vimmake_windows != 0)
-		let l:cmd = get(g:vimmake_extrun, l:ext, '')
+		let l:cmd = get(g:vimmake_ftrun, &ft, '')
 		let l:fname = shellescape(expand("%"))
 		if l:cmd == ''
-			if index(['py', 'pyw', 'pyc', 'pyo'], l:ext) >= 0
+			if &ft == 'python'
 				let l:cmd = 'python'
-			elseif l:ext  == "js" || &ft == 'javascript'
+			elseif &ft == 'javascript'
 				let l:cmd = 'node'
-			elseif l:ext == 'sh' || &ft == 'sh'
+			elseif &ft == 'sh'
 				let l:cmd = 'sh'
-			elseif l:ext == 'lua' || &ft == 'lua'
+			elseif &ft == 'lua'
 				let l:cmd = 'lua'
-			elseif l:ext == 'pl' || &ft == 'perl'
+			elseif &ft == 'perl'
 				let l:cmd = 'perl'
-			elseif l:ext == 'rb' || &ft == 'ruby'
+			elseif &ft == 'ruby'
 				let l:cmd = 'ruby'
-			elseif l:ext == 'php' || &ft == 'php'
+			elseif &ft == 'php'
 				let l:cmd = 'php'
 			elseif l:ext == 'ps1'
 				let l:cmd = 'powershell'
@@ -1257,22 +1356,22 @@ function! s:Cmd_VimExecute(bang, ...)
 			call vimmake#run('', {'mode':4}, l:cmd . ' ' . l:fname)
 		endif
 	else
-		let l:cmd = get(g:vimmake_extrun, l:ext, '')
+		let l:cmd = get(g:vimmake_ftrun, &ft, '')
 		if l:cmd != ''
 			exec '!'. l:cmd . ' ' . shellescape(expand("%"))
-		elseif index(['py', 'pyw', 'pyc', 'pyo'], l:ext) >= 0
+		elseif &ft == 'python'
 			exec '!python ' . shellescape(expand("%"))
-		elseif l:ext  == "js" || &ft == 'javascript' 
+		elseif &ft == 'javascript' 
 			exec '!node ' . shellescape(expand("%"))
-		elseif l:ext == 'sh' || &ft == 'sh'
+		elseif &ft == 'sh'
 			exec '!sh ' . shellescape(expand("%"))
-		elseif l:ext == 'lua' || &ft == 'lua'
+		elseif &ft == 'lua'
 			exec '!lua ' . shellescape(expand("%"))
-		elseif l:ext == 'pl' || &ft == 'perl'
+		elseif &ft == 'perl'
 			exec '!perl ' . shellescape(expand("%"))
-		elseif l:ext == 'rb' || &ft == 'ruby'
+		elseif &ft == 'ruby'
 			exec '!ruby ' . shellescape(expand("%"))
-		elseif l:ext == 'php' || &ft == 'php'
+		elseif &ft == 'php'
 			exec '!php ' . shellescape(expand("%"))
 		elseif index(['osa', 'scpt', 'applescript'], l:ext) >= 0
 			exec '!osascript '. shellescape(expand('%'))
@@ -1353,93 +1452,6 @@ command! -bang -nargs=* VimBuild call s:Cmd_VimBuild('<bang>', <f-args>)
 "----------------------------------------------------------------------
 " get full filename, '' as current cwd, '%' as current buffer
 "----------------------------------------------------------------------
-function! vimmake#fullname(f)
-	let f = a:f
-	if f =~ "'."
-		try
-			redir => m
-			silent exe ':marks' f[1]
-			redir END
-			let f = split(split(m, '\n')[-1])[-1]
-			let f = filereadable(f)? f : ''
-		catch
-			let f = '%'
-		endtry
-	endif
-	let f = (f != '%')? f : expand('%')
-	let f = fnamemodify(f, ':p')
-	if s:vimmake_windows
-		let f = substitute(f, "\\", '/', 'g')
-	endif
-	if len(f) > 1
-		let size = len(f)
-		if f[size - 1] == '/'
-			let f = strpart(f, 0, size - 1)
-		endif
-	endif
-	return f
-endfunc
-
-
-"----------------------------------------------------------------------
-" guess root, '' as current direct, '%' as current buffer
-"----------------------------------------------------------------------
-function! vimmake#find_root(path, markers)
-    function! s:guess_root(filename, markers)
-        let fullname = vimmake#fullname(a:filename)
-        if exists('b:vimmake_root')
-            let l:vimmake_root = fnamemodify(b:vimmake_root, ':p')
-            if stridx(fullfile, l:vimmake_root) == 0
-                return b:vimmake_root
-            endif
-        endif
-        if fullname =~ '^fugitive:/'
-            if exists('b:git_dir')
-                return fnamemodify(b:git_dir, ':h')
-            endif
-            return '' " skip any fugitive buffers early
-        endif
-		let pivot = fullname
-		if !isdirectory(pivot)
-			let pivot = fnamemodify(pivot, ':h')
-		endif
-		while 1
-			let prev = pivot
-			for marker in a:markers
-				let newname = s:PathJoin(pivot, marker)
-				if filereadable(newname)
-					return pivot
-				elseif isdirectory(newname)
-					return pivot
-				endif
-			endfor
-			let pivot = fnamemodify(pivot, ':h')
-			if pivot == prev
-				break
-			endif
-		endwhile
-        return ''
-    endfunc
-	let root = s:guess_root(a:path, a:markers)
-	if len(root)
-		return vimmake#fullname(root)
-	endif
-	" Not found: return parent directory of current file / file itself.
-	let fullname = vimmake#fullname(a:path)
-	if isdirectory(fullname)
-		return fullname
-	endif
-	return vimmake#fullname(fnamemodify(fullname, ':h'))
-endfunc
-
-
-function! vimmake#get_root(path)
-	let markers = ['.project', '.git', '.hg', '.svn', '.root']
-	if exists('g:vimmake_rootmarks')
-		let markers = g:vimmake_rootmarks
-	endif
-	return vimmake#find_root(a:path, markers)
-endfunc
 
 
 "----------------------------------------------------------------------
