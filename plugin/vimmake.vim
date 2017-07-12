@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com
-" Last change: 2017.6.25
+" Last change: 2017.7.12
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -387,6 +387,9 @@ function! s:Vimmake_Build_Update(count)
 		let &g:efm = s:build_efm
 	endif
 	let l:raw = (s:build_efm == '')? 1 : 0
+	if s:build_info.raw == 1
+		let l:raw = 1
+	endif
 	while s:build_tail < s:build_head
 		let l:text = s:build_output[s:build_tail]
 		if l:iconv != 0
@@ -797,6 +800,7 @@ function! s:ExtractOpt(command)
 	let opts.post = get(opts, 'post', '')
 	let opts.text = get(opts, 'text', '')
 	let opts.auto = get(opts, 'auto', '')
+	let opts.raw = get(opts, 'raw', '')
 	if 0
 		echom 'cwd:'. opts.cwd
 		echom 'mode:'. opts.mode
@@ -971,6 +975,7 @@ function! s:run(opts)
 		let s:build_info.postsave = opts.post
 		let s:build_info.autosave = opts.auto
 		let s:build_info.text = opts.text
+		let s:build_info.raw = opts.raw
 		if s:Vimmake_Build_Start(l:command) != 0
 			call s:AutoCmd('Error')
 		endif
@@ -1019,13 +1024,15 @@ function! s:run(opts)
 			py p = subprocess.Popen(**argv)
 			py text = p.stdout.read()
 			py p.stdout.close()
-			py p.wait()
+			py c = p.wait()
 			if has('patch-7.4.145') || v:version >= 800
 				let l:retval = pyeval('text')
+				let g:vimmake_shell_error = pyeval('c')
 			else
 				py text = text.replace('\\', '\\\\').replace('"', '\\"')
 				py text = text.replace('\n', '\\n').replace('\r', '\\r')
 				py vim.command('let l:retval = "%s"'%text)
+				py vim.command('let g:vimmake_shell_error = %d'%c)
 			endif
 		elseif s:vimmake_windows != 0 && has('python3')
 			let l:script = s:ScriptWrite(l:command, 0)
@@ -1036,16 +1043,19 @@ function! s:run(opts)
 			py3 p = subprocess.Popen(**argv)
 			py3 text = p.stdout.read()
 			py3 p.stdout.close()
-			py3 p.wait()
+			py3 c = p.wait()
 			if has('patch-7.4.145') || v:version >= 800
 				let l:retval = py3eval('text')
+				let g:vimmake_shell_error = py3eval('c')
 			else
 				py3 text = text.replace('\\', '\\\\').replace('"', '\\"')
 				py3 text = text.replace('\n', '\\n').replace('\r', '\\r')
 				py3 vim.command('let l:retval = "%s"'%text)
+				py3 vim.command('let g:vimmake_shell_error = %d'%c)
 			endif
 		else
 			let l:retval = system(l:command)
+			let g:vimmake_shell_error = v:shell_error
 		endif
 		let g:vimmake_text = opts.text
 		if opts.post != '' 
