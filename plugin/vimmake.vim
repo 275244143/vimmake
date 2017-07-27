@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com
-" Last change: 2017.7.12
+" Last change: 2017/07/27 18:41:28
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -914,16 +914,24 @@ function! s:find_root(path, markers)
 endfunc
 
 " get project root
-function! vimmake#get_root(path)
+function! vimmake#get_root(path, ...)
 	let markers = ['.project', '.git', '.hg', '.svn', '.root']
 	if exists('g:vimmake_rootmarks')
 		let markers = g:vimmake_rootmarks
+	endif
+	if a:0 > 0
+		let markers = a:1
 	endif
 	let l:hr = s:find_root(a:path, markers)
 	if s:vimmake_windows
 		let l:hr = s:StringReplace(l:hr, '/', "\\")
 	endif
 	return l:hr
+endfunc
+
+" join path
+function! vimmake#path_join(home, name)
+	return s:PathJoin(a:home, a:name)
 endfunc
 
 
