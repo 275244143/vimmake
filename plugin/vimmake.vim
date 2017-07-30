@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com
-" Last change: 2017/07/27 18:41:28
+" Last change: 2017/07/31 03:21:23
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -563,6 +563,10 @@ function! s:Vimmake_Build_NeoVim(job_id, data, event)
 		let l:size = len(a:data)
 		while l:index < l:size
 			let s:text = a:data[l:index]
+			if s:text == '' && l:index == l:size - 1
+				let l:index += 1
+				continue
+			endif
 			if s:vimmake_windows != 0
 				let s:text = substitute(s:text, '\r$', '', 'g')
 			endif
