@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com
-" Last change: 2017/08/01 16:20:20
+" Last change: 2017/08/02 02:28:19
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -1520,7 +1520,7 @@ function! s:Cmd_VimBuild(bang, ...)
 			exec vimmake .'@ emake --ini='.shellescape(l:conf).' '.l:source
 		endif
 	elseif index(['3', 'gnumake'], l:what) >= 0
-		let l:makeprg = get(g:, 'asyncrun_mp_make', '')
+		let l:makeprg = get(g:, 'vimmake_mp_make', '')
 		let l:fname = shellescape(expand("%:t"))
 		if l:makeprg == ''
 			if executable('make')
