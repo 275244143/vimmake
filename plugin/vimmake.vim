@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com
-" Last change: 2017/07/31 03:21:23
+" Last change: 2017/08/01 16:20:20
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -1314,7 +1314,45 @@ function! s:ExecuteMe(mode)
 		else
 			exec '!emake -e ' . l:fname
 		endif
-	else
+	elseif a:mode == 3			" execute makefile
+		let l:makeprg = get(g:, 'vimmake_mp_run', '')
+		let l:fname = shellescape(expand("%"))
+		if l:makeprg == ''
+			if executable('make')
+				let l:makeprg = 'make run -f'
+			elseif executable('mingw32-make')
+				let l:makeprg = 'mingw32-make run -f'
+			elseif executable('mingw64-make')
+				let l:makeprg = 'mingw64-make run -f'
+			else
+				redraw 
+				call s:ErrorMsg('cannot find make/mingw32-make')
+				return
+			endif
+		endif
+		if (has('gui_running') || has('nvim')) && (s:vimmake_windows != 0)
+			let l:cmdline = l:makeprg. ' '.l:fname 
+			if !has('nvim')
+				silent exec '!start cmd /C '.l:cmdline . ' & pause'
+			else
+				call vimmake#run('', {'mode':4}, l:cmdline)
+			endif
+		else
+			exec '!'.l:makeprg.' '.l:fname
+		endif
+	elseif a:mode == 4
+		let ext = tolower(expand("%:e"))
+		if index(['c', 'cc', 'cpp', 'h', 'mak', 'em', 'emk'], ext) >= 0
+			call s:ExecuteMe(2)
+		elseif index(['py', 'pyw', 'cxx', 'java', 'pyx', 'go'], ext) >= 0
+			call s:ExecuteMe(2)
+		elseif index(['c', 'cpp', 'python', 'java', 'go'], &ft) >= 0
+			call s:ExecuteMe(2)
+		elseif index(['javascript'], &ft) >= 0
+			call s:ExecuteMe(2)
+		else
+			call s:ExecuteMe(3)
+		endif
 	endif
 endfunc
 
@@ -1349,14 +1387,20 @@ function! s:Cmd_VimExecute(bang, ...)
 		call s:ExecuteMe(1)
 	elseif index(['2', 'emake'], l:mode) >= 0
 		call s:ExecuteMe(2)
+	elseif index(['3', 'make'], l:mode) >= 0
+		call s:ExecuteMe(3)
+	elseif index(['4', 'automake', 'auto'], l:mode) >= 0
+		call s:ExecuteMe(4)
 	elseif index(['c', 'cpp', 'cc', 'm', 'mm', 'cxx'], l:ext) >= 0
 		call s:ExecuteMe(1)
 	elseif index(['h', 'hh', 'hpp'], l:ext) >= 0
 		call s:ExecuteMe(1)
 	elseif index(g:vimmake_run_guess, l:ext) >= 0
 		call s:ExecuteMe(1)
-	elseif index(['mak', 'emake'], l:ext) >= 0
+	elseif index(['mak', 'emake', 'em', 'emk'], l:ext) >= 0
 		call s:ExecuteMe(2)
+	elseif l:ext == 'mk'
+		call s:ExecuteMe(3)
 	elseif &filetype == "vim"
 		exec 'source ' . fnameescape(expand("%"))
 	elseif (has('gui_running') || has('nvim')) && (s:vimmake_windows != 0)
@@ -1447,7 +1491,7 @@ function! s:Cmd_VimBuild(bang, ...)
 	endif
 	let vimmake = 'VimMake '
 	if g:vimmake_build_name != ''
-		let vimmake .= '-auto='.fnameescape(g:vimmake_build_name).' @ '
+		let vimmake .= '-auto='.fnameescape(g:vimmake_build_name).' '
 	endif
 	if index(['0', 'gcc', 'cc'], l:what) >= 0
 		let l:filename = expand("%")
@@ -1464,23 +1508,71 @@ function! s:Cmd_VimBuild(bang, ...)
 		exec vimmake .l:cmd . ' ' . l:flags 
 	elseif index(['1', 'make'], l:what) >= 0
 		if l:conf == ''
-			exec vimmake .'make'
+			exec vimmake .'@ make'
 		else
-			exec vimmake .'make '.shellescape(l:conf)
+			exec vimmake .'@ make '.shellescape(l:conf)
 		endif
 	elseif index(['2', 'emake'], l:what) >= 0
 		let l:source = shellescape(expand("%"))
 		if l:conf == ''
-			exec vimmake .'emake "$(VIM_FILEPATH)"'
+			exec vimmake .'@ emake "$(VIM_FILEPATH)"'
 		else
-			exec vimmake .'emake --ini='.shellescape(l:conf).' '.l:source
+			exec vimmake .'@ emake --ini='.shellescape(l:conf).' '.l:source
+		endif
+	elseif index(['3', 'gnumake'], l:what) >= 0
+		let l:makeprg = get(g:, 'asyncrun_mp_make', '')
+		let l:fname = shellescape(expand("%:t"))
+		if l:makeprg == ''
+			if executable('make')
+				let l:makeprg = 'make -f'
+			elseif executable('mingw32-make')
+				let l:makeprg = 'mingw32-make -f'
+			elseif executable('mingw64-make')
+				let l:makeprg = 'mingw64-make -f'
+			else
+				redraw 
+				call s:ErrorMsg('cannot find make/mingw32-make')
+				return
+			endif
+		endif
+		let vimmake = vimmake . '-cwd=$(VIM_FILEDIR) @ '
+		if l:conf == ''
+			exec vimmake . l:makeprg. ' '.l:fname
+		else
+			exec vimmake . l:makeprg. ' '.l:fname . ' '.l:conf
+		endif
+	elseif index(['4', 'automake', 'auto'], l:what) >= 0
+		let ext = tolower(expand('%:e'))
+		let mode = 0
+		if index(['c', 'cc', 'cpp', 'h', 'mak', 'em', 'emk'], ext) >= 0
+			let mode = 0
+		elseif index(['py', 'pyw', 'cxx', 'java', 'pyx', 'go'], ext) >= 0
+			let mode = 0
+		elseif index(['c', 'cpp', 'python', 'java', 'go'], &ft) >= 0
+			let mode = 0
+		elseif index(['javascript'], &ft) >= 0
+			let mode = 0
+		else
+			let mode = 1
+		endif
+		if mode == 0
+			if l:conf == ''
+				call s:Cmd_VimBuild(a:bang, '2')
+			else
+				call s:Cmd_VimBuild(a:bang, '2', l:conf)
+			endif
+		else
+			if l:conf == ''
+				call s:Cmd_VimBuild(a:bang, '3')
+			else
+				call s:Cmd_VimBuild(a:bang, '3', l:conf)
+			endif
 		endif
 	endif
 endfunc
 
 
 command! -bang -nargs=* VimBuild call s:Cmd_VimBuild('<bang>', <f-args>)
-
 
 
 
@@ -1620,13 +1712,13 @@ command! -nargs=* -bang VimScope call s:Cmd_VimScope("<bang>", <f-args>)
 function! vimmake#keymap()
 	noremap <silent><F5> :VimExecute run<cr>
 	noremap <silent><F6> :VimExecute filename<cr>
-	noremap <silent><F7> :VimBuild emake<cr>
-	noremap <silent><F8> :VimExecute emake<cr>
+	noremap <silent><F7> :VimBuild auto<cr>
+	noremap <silent><F8> :VimExecute auto<cr>
 	noremap <silent><F9> :VimBuild gcc<cr>
 	noremap <silent><F10> :call vimmake#toggle_quickfix(6)<cr>
 	inoremap <silent><F5> <ESC>:VimExecute run<cr>
 	inoremap <silent><F6> <ESC>:VimExecute filename<cr>
-	inoremap <silent><F7> <ESC>:VimBuild emake<cr>
+	inoremap <silent><F7> <ESC>:VimBuild auto<cr>
 	inoremap <silent><F8> <ESC>:VimExecute emake<cr>
 	inoremap <silent><F9> <ESC>:VimBuild gcc<cr>
 	inoremap <silent><F10> <ESC>:call vimmake#toggle_quickfix(6)<cr>
