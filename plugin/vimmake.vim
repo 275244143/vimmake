@@ -1342,9 +1342,9 @@ function! s:ExecuteMe(mode)
 		endif
 	elseif a:mode == 4
 		let ext = tolower(expand("%:e"))
-		if index(['c', 'cc', 'cpp', 'h', 'mak', 'em', 'emk'], ext) >= 0
+		if index(['c', 'cc', 'cpp', 'h', 'mak', 'em', 'emk', 'm'], ext) >= 0
 			call s:ExecuteMe(2)
-		elseif index(['py', 'pyw', 'cxx', 'java', 'pyx', 'go'], ext) >= 0
+		elseif index(['mm', 'py', 'pyw', 'cxx', 'java', 'pyx'], ext) >= 0
 			call s:ExecuteMe(2)
 		elseif index(['c', 'cpp', 'python', 'java', 'go'], &ft) >= 0
 			call s:ExecuteMe(2)
@@ -1544,9 +1544,9 @@ function! s:Cmd_VimBuild(bang, ...)
 	elseif index(['4', 'automake', 'auto'], l:what) >= 0
 		let ext = tolower(expand('%:e'))
 		let mode = 0
-		if index(['c', 'cc', 'cpp', 'h', 'mak', 'em', 'emk'], ext) >= 0
+		if index(['c', 'cc', 'cpp', 'h', 'mak', 'em', 'emk', 'm'], ext) >= 0
 			let mode = 0
-		elseif index(['py', 'pyw', 'cxx', 'java', 'pyx', 'go'], ext) >= 0
+		elseif index(['mm', 'py', 'pyw', 'cxx', 'java', 'pyx'], ext) >= 0
 			let mode = 0
 		elseif index(['c', 'cpp', 'python', 'java', 'go'], &ft) >= 0
 			let mode = 0
