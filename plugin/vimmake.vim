@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com
-" Last change: 2017/08/02 02:28:19
+" Last change: 2017/08/05 04:37:29
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -45,6 +45,8 @@
 "     $ sudo python emake.py -i
 "
 "
+
+" vim: set et fenc=utf-8 ff=unix sts=8 sw=4 ts=4 :
 
 
 "----------------------------------------------------------------------
