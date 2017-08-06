@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com
-" Last change: 2017/08/05 04:37:29
+" Last change: 2017/08/06 10:04:41
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -1077,14 +1077,16 @@ function! s:run(opts)
 		endif
 	elseif l:mode <= 5
 		if s:vimmake_windows != 0 && (has('gui_running') || has('nvim'))
-			let l:ccc = shellescape(s:ScriptWrite(l:command, 1))
 			if l:mode == 4
+				let l:ccc = shellescape(s:ScriptWrite(l:command, 1))
 				silent exec '!start cmd /C '. l:ccc
 			else
+				let l:ccc = shellescape(s:ScriptWrite(l:command, 0))
 				silent exec '!start /b cmd /C '. l:ccc
 			endif
 			redraw
 		else
+			let l:ccc = shellescape(s:ScriptWrite(l:command, 0))
 			if l:mode == 4
 				exec '!' . escape(l:command, '%#')
 			else
