@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com
-" Last change: 2017/08/06 10:04:41
+" Last change: 2017/12/12 01:11:41
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -270,18 +270,15 @@ let s:build_state = 0
 let s:build_start = 0.0
 let s:build_debug = 0
 let s:build_quick = 0
-let s:build_hold = 0
 let s:build_scroll = 0
 let s:build_congest = 0
 let s:build_efm = &errorformat
 
-" check :cbottom available, cursor in quick need to hold ?
+" check :cbottom available ?
 if s:build_nvim == 0
 	let s:build_quick = (v:version >= 800 || has('patch-7.4.1997'))? 1 : 0
-	let s:build_hold = (v:version >= 800 || has('patch-7.4.2100'))? 0 : 1
 else
-	let s:build_quick = 0
-	let s:build_hold = 1
+	let s:build_quick = has('nvim-0.2.0')? 1 : 0
 endif
 
 " check if we have vim 8.0.100
@@ -290,19 +287,9 @@ if s:build_nvim == 0 && v:version >= 800
 	let s:build_congest = 0
 endif
 
-" scroll quickfix down
-function! s:Vimmake_Build_Scroll()
-	if getbufvar('%', '&buftype') == 'quickfix'
-		silent exec 'normal! G'
-	endif
-endfunc
-
 " check last line
 function! s:Vimmake_Build_Cursor()
 	if &buftype == 'quickfix'
-		if s:build_hold != 0
-			let w:vimmake_build_qfview = winsaveview()
-		endif
 		if line('.') != line('$')
 			let s:build_last = 0
 		endif
@@ -312,32 +299,11 @@ endfunc
 " find quickfix window and scroll to the bottom then return last window
 function! s:Vimmake_Build_AutoScroll()
 	if s:build_quick == 0
-		let l:winnr = winnr()			
-		noautocmd windo call s:Vimmake_Build_Scroll()
-		noautocmd silent exec ''.l:winnr.'wincmd w'
+		if &buftype == 'quickfix'
+			silent exec 'normal! G'
+		endif
 	else
 		cbottom
-	endif
-endfunc
-
-" restore view in neovim
-function! s:Vimmake_Build_ViewReset()
-	if &buftype == 'quickfix'
-		if exists('w:vimmake_build_qfview')
-			call winrestview(w:vimmake_build_qfview)
-			unlet w:vimmake_build_qfview
-		endif
-	endif
-endfunc
-
-" neoview will reset cursor when caddexpr is invoked
-function! s:Vimmake_Build_QuickReset()
-	if &buftype == 'quickfix'
-		call s:Vimmake_Build_ViewReset()
-	else
-		let l:winnr = winnr()
-		noautocmd windo call s:Vimmake_Build_ViewReset()
-		noautocmd silent exec ''.l:winnr.'wincmd w'
 	endif
 endfunc
 
@@ -345,9 +311,6 @@ endfunc
 function! s:Vimmake_Build_CheckScroll()
 	if g:vimmake_build_last == 0
 		if &buftype == 'quickfix'
-			if s:build_hold != 0
-				let w:vimmake_build_qfview = winsaveview()
-			endif
 			return (line('.') == line('$'))
 		else
 			return 1
@@ -362,9 +325,6 @@ function! s:Vimmake_Build_CheckScroll()
 		return 1
 	else
 		if &buftype == 'quickfix'
-			if s:build_hold != 0
-				let w:vimmake_build_qfview = winsaveview()
-			endif
 			return (line('.') == line('$'))
 		else
 			return (!pumvisible())
@@ -424,8 +384,6 @@ function! s:Vimmake_Build_Update(count)
 	endif
 	if s:build_scroll != 0 && l:total > 0 && l:check != 0
 		call s:Vimmake_Build_AutoScroll()
-	elseif s:build_hold != 0
-		call s:Vimmake_Build_QuickReset()
 	endif
 	if g:vimmake_build_update != ''
 		exec g:vimmake_build_update
@@ -510,8 +468,6 @@ function! s:Vimmake_Build_OnFinish()
 	let s:build_state = 0
 	if s:build_scroll != 0 && l:check != 0
 		call s:Vimmake_Build_AutoScroll()
-	else
-		call s:Vimmake_Build_QuickReset()
 	endif
 	if g:vimmake_build_bell != 0
 		exec "norm! \<esc>"
@@ -946,9 +902,13 @@ endfunc
 "----------------------------------------------------------------------
 function! s:run(opts)
 	let l:opts = a:opts
-	let l:mode = a:opts.mode
+	let l:mode = g:vimmake_default
 	let l:command = a:opts.cmd
 	let l:retval = ''
+
+	if a:opts.mode != ''
+		let l:mode = a:opts.mode
+	endif
 
 	" process makeprg/grepprg in -program=?
 	let l:program = ""
