@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com
-" Last change: 2017/12/12 01:11:41
+" Last change: 2017/12/13 15:31:12
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -153,6 +153,11 @@ if !exists('g:vimmake_build_shellflag')
 	let g:vimmake_build_shellflag = ''
 endif
 
+" skip autocmd ?
+if !exists('g:vimmake_build_skip')
+	let g:vimmake_build_skip = 0
+endif
+
 " build info
 if !exists('g:vimmake_text')
 	let g:vimmake_text = ''
@@ -251,7 +256,7 @@ endfunc
 
 " run autocmd
 function! s:AutoCmd(name)
-	if has('autocmd')
+	if has('autocmd') && and(g:vimmake_build_skip, 2) == 0
 		exec 'silent doautocmd User VimMake'.a:name
 	endif
 endfunc
@@ -363,7 +368,11 @@ function! s:Vimmake_Build_Update(count)
 		endif
 		if l:text != ''
 			if l:raw == 0
-				caddexpr l:text
+				if and(g:vimmake_build_skip, 1) == 0
+					caddexpr l:text
+				else
+					noautocmd caddexpr l:text
+				endif
 			else
 				call setqflist([{'text':l:text}], 'a')
 			endif
@@ -396,6 +405,9 @@ function! s:Vimmake_Build_AutoCmd(mode, auto)
 	if !has('autocmd') | return | endif
 	let name = (a:auto == '')? g:vimmake_build_auto : a:auto
 	if name !~ '^\w\+$' || name == 'NONE' || name == '<NONE>'
+		return
+	endif
+	if and(g:vimmake_build_skip, 4) != 0
 		return
 	endif
 	if a:mode == 0
