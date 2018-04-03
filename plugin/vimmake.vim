@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com, 2016, 2017, 2018
-" Last Modified: 2018/03/02 10:52
+" Last Modified: 2018/04/03 18:30
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -262,7 +262,7 @@ endfunc
 
 " run autocmd
 function! s:AutoCmd(name)
-	if has('autocmd') && and(g:vimmake_build_skip, 2) == 0
+	if has('autocmd') && ((g:vimmake_build_skip / 2) % 2) == 0
 		exec 'silent doautocmd User VimMake'.a:name
 	endif
 endfunc
@@ -413,7 +413,7 @@ function! s:Vimmake_Build_AutoCmd(mode, auto)
 	if name !~ '^\w\+$' || name == 'NONE' || name == '<NONE>'
 		return
 	endif
-	if and(g:vimmake_build_skip, 4) != 0
+	if ((g:vimmake_build_skip / 4) % 2) != 0
 		return
 	endif
 	if a:mode == 0
