@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com, 2016, 2017, 2018
-" Last Modified: 2018/04/16 21:23
+" Last Modified: 2018/04/17 18:13
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -543,22 +543,32 @@ function! s:Vimmake_Build_NeoVim(job_id, data, event)
 	if a:event == 'stdout' || a:event == 'stderr'
 		let l:index = 0
 		let l:size = len(a:data)
+		let cache = (a:event == 'stdout')? s:neovim_stdout : s:neovim_stderr
 		while l:index < l:size
-			let s:text = a:data[l:index]
-			if s:text == '' && l:index == l:size - 1
-				let l:index += 1
-				continue
+			let cache .= a:data[l:index]
+			if l:index + 1 < l:size
+				let s:build_output[s:build_head] = cache
+				let s:build_head += 1
+				let cache = ''
 			endif
-			if s:vimmake_windows != 0
-				let s:text = substitute(s:text, '\r$', '', 'g')
-			endif
-			let s:build_output[s:build_head] = s:text
-			let s:build_head += 1
 			let l:index += 1
 		endwhile
+		if a:event == 'stdout'
+			let s:neovim_stdout = cache
+		else
+			let s:neovim_stderr = cache
+		endif
 	elseif a:event == 'exit'
 		if type(a:data) == type(1)
 			let s:build_code = a:data
+		endif
+		if s:neovim_stdout != ''
+			let s:build_output[s:build_head] = s:neovim_stdout
+			let s:build_head += 1
+		endif
+		if s:neovim_stderr != ''
+			let s:build_output[s:build_head] = s:neovim_stderr
+			let s:build_head += 1
 		endif
 		let s:build_state = or(s:build_state, 6)
 	endif
@@ -667,6 +677,12 @@ function! s:Vimmake_Build_Start(cmd)
 		if g:vimmake_build_stop != ''
 			let l:options['stoponexit'] = g:vimmake_build_stop
 		endif
+		if s:build_info.range > 0
+			let l:options['in_io'] = 'buffer'
+			let l:options['in_buf'] = s:build_info.range_buf
+			let l:options['in_top'] = s:build_info.range_top
+			let l:options['in_bot'] = s:build_info.range_bot
+		endif
 		let s:build_job = job_start(l:args, l:options)
 		let l:success = (job_status(s:build_job) != 'fail')? 1 : 0
 	else
@@ -674,8 +690,27 @@ function! s:Vimmake_Build_Start(cmd)
 		let l:callbacks['on_stdout'] = function('s:Vimmake_Build_NeoVim')
 		let l:callbacks['on_stderr'] = function('s:Vimmake_Build_NeoVim')
 		let l:callbacks['on_exit'] = function('s:Vimmake_Build_NeoVim')
+		let s:neovim_stdout = ''
+		let s:neovim_stderr = ''
 		let s:build_job = jobstart(l:args, l:callbacks)
 		let l:success = (s:build_job > 0)? 1 : 0
+		if l:success != 0
+			if s:build_info.range > 0
+				let l:top = s:build_info.range_top
+				let l:bot = s:build_info.range_bot
+				let l:lines = getline(l:top, l:bot)
+				if exists('*chansend')
+					call chansend(s:build_job, l:lines)
+				elseif exists('*jobsend')
+					call jobsend(s:build_job, l:lines)
+				endif
+			endif
+			if exists('*chanclose')
+				call chanclose(s:build_job, 'stdin')
+			elseif exists('*jobclose')
+				call jobclose(s:build_job, 'stdin')
+			endif
+		endif
 	endif
 	if l:success != 0
 		let s:build_state = or(s:build_state, 1)
@@ -984,6 +1019,10 @@ function! s:run(opts)
 		let s:build_info.autosave = opts.auto
 		let s:build_info.text = opts.text
 		let s:build_info.raw = opts.raw
+		let s:build_info.range = opts.range
+		let s:build_info.range_top = opts.range_top
+		let s:build_info.range_bot = opts.range_bot
+		let s:build_info.range_buf = opts.range_buf
 		if s:Vimmake_Build_Start(l:command) != 0
 			call s:AutoCmd('Error')
 		endif
@@ -1100,7 +1139,7 @@ endfunc
 "----------------------------------------------------------------------
 " run command
 "----------------------------------------------------------------------
-function! vimmake#run(bang, opts, args)
+function! vimmake#run(bang, opts, args, ...)
 	let l:macros = {}
 	let l:macros['VIM_FILEPATH'] = expand("%:p")
 	let l:macros['VIM_FILENAME'] = expand("%:t")
@@ -1141,6 +1180,21 @@ function! vimmake#run(bang, opts, args)
 
 	" update info (current running command text)
 	let g:vimmake_build_info = a:args
+
+	" setup range
+	let l:opts.range = 0
+	let l:opts.range_top = 0
+	let l:opts.range_bot = 0
+	let l:opts.range_buf = 0
+
+	if a:0 >= 3 
+		if a:1 > 0 && a:2 <= a:3
+			let l:opts.range = 2
+			let l:opts.range_top = a:2
+			let l:opts.range_bot = a:3
+			let l:opts.range_buf = bufnr('%')
+		endif
+	endif
 
 	" check cwd
 	if l:opts.cwd != ''
@@ -1217,8 +1271,8 @@ endfunc
 "----------------------------------------------------------------------
 " define commands
 "----------------------------------------------------------------------
-command! -bang -nargs=+ -complete=file VimMake
-		\ call vimmake#run("<bang>", '', <q-args>)
+command! -bang -nargs=+ -range=0 -complete=file VimMake
+		\ call vimmake#run("<bang>", '', <q-args>, <count>, <line1>, <line2>)
 
 command! -bang -nargs=0 VimStop call vimmake#stop('<bang>')
 
