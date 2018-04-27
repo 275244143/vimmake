@@ -1,7 +1,7 @@
 " vimmake.vim - Enhenced Customize Make system for vim
 "
 " Maintainer: skywind3000 (at) gmail.com, 2016, 2017, 2018
-" Last Modified: 2018/04/17 18:13
+" Last Modified: 2018/04/27 14:55
 "
 " Execute customize tools: ~/.vim/vimmake.{name} directly:
 "     :VimTool {name}
@@ -270,6 +270,16 @@ function! s:AutoCmd(name)
 	if has('autocmd') && ((g:vimmake_build_skip / 2) % 2) == 0
 		exec 'silent doautocmd User VimMake'.a:name
 	endif
+endfunc
+
+" change directory with right command
+function! s:chdir(path)
+	if has('nvim')
+		let cmd = haslocaldir()? 'lcd' : (haslocaldir(-1, 0)? 'tcd' : 'cd')
+	else
+		let cmd = haslocaldir()? 'lcd' : 'cd'
+	endif
+	silent execute cmd . ' '. fnameescape(a:path)
 endfunc
 
 
@@ -1159,7 +1169,6 @@ function! vimmake#run(bang, opts, args, ...)
 	let l:macros['VIM_ROOT'] = vimmake#get_root('%')
 	let l:macros['<cwd>'] = getcwd()
 	let l:macros['<root>'] = l:macros['VIM_ROOT']
-	let cd = haslocaldir()? 'lcd ' : 'cd '
 	let l:retval = ''
 
 	" extract options
@@ -1203,7 +1212,7 @@ function! vimmake#run(bang, opts, args, ...)
 			let l:opts.cwd = s:StringReplace(l:opts.cwd, l:replace, l:val)
 		endfor
 		let l:opts.savecwd = getcwd()
-		silent! exec cd . fnameescape(l:opts.cwd)
+		silent! call s:chdir(l:opts.cwd)
 		let l:macros['VIM_CWD'] = getcwd()
 		let l:macros['VIM_RELDIR'] = expand("%:h:.")
 		let l:macros['VIM_RELNAME'] = expand("%:p:.")
@@ -1241,7 +1250,7 @@ function! vimmake#run(bang, opts, args, ...)
 
 	" restore cwd
 	if l:opts.cwd != ''
-		silent! exec cd fnameescape(l:opts.savecwd)
+		silent! call s:chdir(l:opts.savecwd)
 	endif
 
 	return l:retval
@@ -1422,7 +1431,6 @@ endfunc
 "- Execute current file by mode or filetype
 "----------------------------------------------------------------------
 function! s:Cmd_VimExecute(bang, ...)
-	let cd = haslocaldir()? 'lcd ' : 'cd '
 	let l:mode = (a:0 < 1)? '' : a:1
 	let l:cwd = g:vimmake_cwd
 	if a:0 >= 2
@@ -1440,7 +1448,7 @@ function! s:Cmd_VimExecute(bang, ...)
 		else
 			let l:dest = vimmake#get_root('%')
 		endif
-		silent! exec cd . fnameescape(l:dest)
+		silent! call s:chdir(l:dest)
 	endif
 	if index(['', '0', 'file', 'filename'], l:mode) >= 0
 		call s:ExecuteMe(0)
@@ -1526,7 +1534,7 @@ function! s:Cmd_VimExecute(bang, ...)
 		endif
 	endif
 	if l:cwd > 0
-		silent! exec cd . fnameescape(l:savecwd)
+		call s:chdir(l:savecwd)
 	endif
 endfunc
 
@@ -1659,7 +1667,7 @@ command! -bang -nargs=* VimBuild call s:Cmd_VimBuild('<bang>', <f-args>)
 if !exists('g:vimmake_grep_exts')
 	let g:vimmake_grep_exts = ['c', 'cpp', 'cc', 'h', 'hpp', 'hh', 'as']
 	let g:vimmake_grep_exts += ['m', 'mm', 'py', 'js', 'php', 'java', 'vim']
-	let g:vimmake_grep_exts += ['asm', 's', 'pyw', 'lua', 'go']
+	let g:vimmake_grep_exts += ['asm', 's', 'pyw', 'lua', 'go', 'rs']
 endif
 
 function! vimmake#grep(text, cwd)
@@ -1671,14 +1679,18 @@ function! vimmake#grep(text, cwd)
 	if mode == 'grep'
 		let l:inc = ''
 		for l:item in g:vimmake_grep_exts
-			let l:inc .= " --include=*." . l:item
+			if s:vimmake_windows == 0
+				let l:inc .= " --include='*." . l:item . "'"
+			else
+				let l:inc .= " --include=*." . l:item
+			endif
 		endfor
-        if a:cwd == '.' || a:cwd == ''
-            let l:inc .= ' *'
-        else
-            let l:full = vimmake#fullname(a:cwd)
-            let l:inc .= ' '.shellescape(l:full)
-        endif
+		if a:cwd == '.' || a:cwd == ''
+			let l:inc .= ' *'
+		else
+			let l:full = vimmake#fullname(a:cwd)
+			let l:inc .= ' '.shellescape(l:full)
+		endif
 		let cmd = 'grep -n -s -R ' . (fixed? '-F ' : '')
 		let cmd .= shellescape(a:text). l:inc .' /dev/null'
 		call vimmake#run('', {}, cmd)
@@ -1760,6 +1772,9 @@ function! s:Cmd_VimScope(bang, what, name)
 	elseif a:what == '9' || a:what == 'a'
 		let l:text = 'assigned "'.a:name.'"'
 	endif
+	let ncol = col('.')
+	let nrow = line('.')
+	let nbuf = winbufnr('%')
 	silent cexpr "[cscope ".a:what.": ".l:text."]"
 	let success = 1
 	try
@@ -1780,11 +1795,16 @@ function! s:Cmd_VimScope(bang, what, name)
 		echohl NONE
 		let success = 0
 	endtry
+	if winbufnr('%') == nbuf
+		call cursor(nrow, ncol)
+	endif
 	if success != 0 && a:bang != '!'
 		if has('autocmd')
 			doautocmd User VimScope
 		endif
 	endif
+	redrawstatus!
+	redraw!
 endfunc
 
 command! -nargs=* -bang VimScope call s:Cmd_VimScope("<bang>", <f-args>)
@@ -1836,15 +1856,15 @@ function! vimmake#keymap()
 
 	" set keymap to cscope
 	if has("cscope")
-		noremap <leader>cs :VimScope s <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>cg :VimScope g <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>cc :VimScope c <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>ct :VimScope t <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>ce :VimScope e <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>cd :VimScope d <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>ca :VimScope a <C-R>=expand("<cword>")<CR><CR>
-		noremap <leader>cf :VimScope f <C-R>=expand("<cfile>")<CR><CR>
-		noremap <leader>ci :VimScope i <C-R>=expand("<cfile>")<CR><CR>
+		noremap <silent> <leader>cs :VimScope s <C-R><C-W><CR>
+		noremap <silent> <leader>cg :VimScope g <C-R><C-W><CR>
+		noremap <silent> <leader>cc :VimScope c <C-R><C-W><CR>
+		noremap <silent> <leader>ct :VimScope t <C-R><C-W><CR>
+		noremap <silent> <leader>ce :VimScope e <C-R><C-W><CR>
+		noremap <silent> <leader>cd :VimScope d <C-R><C-W><CR>
+		noremap <silent> <leader>ca :VimScope a <C-R><C-W><CR>
+		noremap <silent> <leader>cf :VimScope f <C-R><C-W><CR>
+		noremap <silent> <leader>ci :VimScope i <C-R><C-W><CR>
 		if v:version >= 800 || has('patch-7.4.2038')
 			set cscopequickfix=s+,c+,d+,i+,t+,e+,g+,f+,a+
 		else
